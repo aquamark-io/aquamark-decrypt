@@ -21,9 +21,9 @@ app.post("/decrypt", upload.single("file"), (req, res) => {
   }
 
   const inputPath = req.file.path;
-  const outputPath = `${inputPath}-decrypted.pdf`;
+  const outputPath = ${inputPath}-decrypted.pdf;
 
-  exec(`qpdf --decrypt "${inputPath}" "${outputPath}"`, (error, stdout, stderr) => {
+  exec(qpdf --decrypt "${inputPath}" "${outputPath}", (error, stdout, stderr) => {
     if (error) {
       console.error("❌ QPDF Error:", error.message);
       console.error("📄 STDERR:", stderr);
@@ -53,5 +53,5 @@ app.get("/", (req, res) => {
 });
 
 app.listen(PORT, () => {
-  console.log(`🚀 Server running on port ${PORT}`);
+  console.log(🚀 Server running on port ${PORT});
 });
