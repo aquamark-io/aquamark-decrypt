@@ -8,6 +8,7 @@ const multer = require('multer');
 
 const app = express();
 const PORT = process.env.PORT || 10000;
+const multer = require('multer');
 
 app.use(cors());
 app.use(fileUpload());
