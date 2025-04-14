@@ -52,6 +52,6 @@ app.get("/", (req, res) => {
   res.send("Aquamark Decryption Service is running.");
 });
 
-app.listen(port, () => {
-  console.log(`🚀 Server running on port ${port}`);
+app.listen(PORT, () => {
+  console.log(`🚀 Server running on port ${PORT}`);
 });
