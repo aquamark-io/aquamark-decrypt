@@ -1,43 +1,52 @@
 const express = require("express");
-const fileUpload = require("express-fileupload");
-const cors = require("cors");
+const multer = require("multer");
 const fs = require("fs");
+const path = require("path");
 const { exec } = require("child_process");
 
 const app = express();
-const PORT = process.env.PORT || 3000;
+const port = process.env.PORT || 3000;
 
-app.use(cors());
-app.use(fileUpload());
+// Set up multer for handling file uploads
+const upload = multer({ dest: "uploads/" });
 
-app.post("/decrypt", async (req, res) => {
-  if (!req.files || !req.files.file) {
+app.post("/decrypt", upload.single("file"), (req, res) => {
+  if (!req.file) {
     return res.status(400).send("No file uploaded.");
   }
 
-  const uploadedFile = req.files.file;
-  const inputPath = `/tmp/${Date.now()}-${uploadedFile.name}`;
-  const outputPath = inputPath.replace(/\.pdf$/, "-decrypted.pdf");
+  const inputPath = req.file.path;
+  const outputPath = `${inputPath}-decrypted.pdf`;
 
-  // Move file to temp directory
-  await uploadedFile.mv(inputPath);
-
-  // Run qpdf to decrypt
-  exec(`qpdf --decrypt "${inputPath}" "${outputPath}"`, (error) => {
-    fs.unlinkSync(inputPath); // Clean up original file
-
-    if (error || !fs.existsSync(outputPath)) {
+  exec(`qpdf --decrypt "${inputPath}" "${outputPath}"`, (error, stdout, stderr) => {
+    if (error) {
+      console.error("❌ QPDF Error:", error.message);
+      console.error("📄 STDERR:", stderr);
       return res.status(500).send("Failed to decrypt PDF.");
     }
 
-    const fileStream = fs.createReadStream(outputPath);
-    res.setHeader("Content-Type", "application/pdf");
-    res.setHeader("Content-Disposition", 'attachment; filename="decrypted.pdf"');
-    fileStream.pipe(res);
-    fileStream.on("close", () => fs.unlinkSync(outputPath)); // Clean up decrypted file
+    console.log("✅ QPDF Decryption succeeded.");
+    console.log("📤 STDOUT:", stdout);
+
+    try {
+      const decryptedBuffer = fs.readFileSync(outputPath);
+      res.setHeader("Content-Type", "application/pdf");
+      res.send(decryptedBuffer);
+    } catch (readErr) {
+      console.error("❌ Failed to read decrypted file:", readErr.message);
+      res.status(500).send("Failed to read decrypted PDF.");
+    } finally {
+      // Clean up temp files
+      fs.unlinkSync(inputPath);
+      fs.unlinkSync(outputPath);
+    }
   });
 });
 
-app.listen(PORT, () => {
-  console.log(`🚀 Server listening on port ${PORT}`);
+app.get("/", (req, res) => {
+  res.send("Aquamark Decryption Service is running.");
+});
+
+app.listen(port, () => {
+  console.log(`🚀 Server running on port ${port}`);
 });
