@@ -60,6 +60,17 @@ app.post("/decrypt", async (req, res) => {
 
 // Watermark endpoint (new)
 app.post("/watermark", async (req, res) => {
+    // Enforce Bearer token from Authorization header
+  const authHeader = req.headers["authorization"];
+  if (!authHeader || !authHeader.startsWith("Bearer ")) {
+    return res.status(401).send("Missing or invalid authorization token.");
+  }
+
+  const token = authHeader.split(" ")[1];
+  if (token !== process.env.AQUAMARK_API_KEY) {
+    return res.status(401).send("Invalid API key.");
+  }
+
   if (!req.files || !req.files.file || !req.body.user_email) {
     return res.status(400).send("Missing required fields: file and user_email.");
   }
