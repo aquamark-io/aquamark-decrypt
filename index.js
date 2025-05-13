@@ -162,23 +162,26 @@ app.post("/watermark", async (req, res) => {
 
     const finalPdf = await pdfDoc.save();
 
-    // 📊 Update Usage
+    // 📊 Update Usage Tracking
 const newPagesUsed = usage.pages_used + numPages;
 const newPagesRemaining = usage.page_credits - newPagesUsed;
 
-console.log("Updating Usage:");
-console.log("Pages Used:", newPagesUsed);
-console.log("Pages Remaining:", newPagesRemaining);
+console.log(`Updating usage for ${userEmail}:`);
+console.log(`Pages Used: ${newPagesUsed}`);
+console.log(`Pages Remaining: ${newPagesRemaining}`);
 
-const { error } = await supabase.from("usage")
+const { data, error } = await supabase.from("usage")
   .update({ 
     pages_used: newPagesUsed,
     pages_remaining: newPagesRemaining
   })
-  .eq("user_email", userEmail);
+  .eq("user_email", userEmail)
+  .select(); // Add .select() to force the update to return data
 
 if (error) {
   console.error("❌ Error updating usage data:", error.message);
+} else {
+  console.log("✅ Usage data updated successfully:", data);
 }
     res.setHeader("Content-Type", "application/pdf");
     res.setHeader("Content-Disposition", `attachment; filename="${file.name.replace('.pdf', '')}-protected.pdf"`);
