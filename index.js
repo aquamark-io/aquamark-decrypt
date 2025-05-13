@@ -1,4 +1,3 @@
-
 const express = require("express");
 const fileUpload = require("express-fileupload");
 const cors = require("cors");
@@ -19,7 +18,9 @@ const supabase = createClient(SUPABASE_URL, SUPABASE_KEY);
 app.use(cors());
 app.use(fileUpload());
 
-// Decrypt endpoint (original)
+/* -----------------------------
+   🔓 Decrypt Endpoint
+----------------------------- */
 app.post("/decrypt", async (req, res) => {
   if (!req.files || !req.files.file) {
     return res.status(400).send("No file uploaded.");
@@ -37,7 +38,7 @@ app.post("/decrypt", async (req, res) => {
     return res.status(500).send("Could not save uploaded PDF.");
   }
 
-  exec(`qpdf --decrypt "${inputPath}" "${outputPath}"`, (error, stdout, stderr) => {
+  exec(`qpdf --decrypt "${inputPath}" "${outputPath}"`, (error) => {
     if (error) {
       console.error("❌ QPDF Error:", error.message);
       fs.unlinkSync(inputPath);
@@ -58,9 +59,10 @@ app.post("/decrypt", async (req, res) => {
   });
 });
 
-// Watermark endpoint (new)
+/* -----------------------------
+   💧 Watermark Endpoint
+----------------------------- */
 app.post("/watermark", async (req, res) => {
-    // Enforce Bearer token from Authorization header
   const authHeader = req.headers["authorization"];
   if (!authHeader || !authHeader.startsWith("Bearer ")) {
     return res.status(401).send("Missing or invalid authorization token.");
@@ -79,13 +81,11 @@ app.post("/watermark", async (req, res) => {
   const file = req.files.file;
 
   try {
-    // Try loading PDF directly
-    let pdfBytes;
+    // 🗄️ Load PDF (or decrypt if encrypted)
+    let pdfBytes = file.data;
     try {
-      pdfBytes = file.data;
       await PDFDocument.load(pdfBytes, { ignoreEncryption: false });
     } catch {
-      // Try to decrypt via qpdf
       const tempId = Date.now();
       const inPath = path.join(__dirname, `temp-${tempId}.pdf`);
       const outPath = path.join(__dirname, `temp-${tempId}-dec.pdf`);
@@ -103,7 +103,7 @@ app.post("/watermark", async (req, res) => {
 
     const pdfDoc = await PDFDocument.load(pdfBytes, { ignoreEncryption: true });
 
-    // Get usage data
+    // 🔍 Check Usage Data
     const { data: usage, error: usageErr } = await supabase
       .from("usage")
       .select("*")
@@ -116,7 +116,7 @@ app.post("/watermark", async (req, res) => {
       return res.status(402).send("Not enough page credits.");
     }
 
-    // Get logo URL
+    // 🎯 Get Logo
     const { data: logoList } = await supabase.storage.from("logos").list(userEmail);
     if (!logoList || logoList.length === 0) throw new Error("No logo found");
 
@@ -128,26 +128,23 @@ app.post("/watermark", async (req, res) => {
     const logoRes = await fetch(logoUrlData.publicUrl);
     const logoBytes = await logoRes.arrayBuffer();
 
-    // Embed logo
-    let embeddedLogo;
-    try {
-      embeddedLogo = await pdfDoc.embedPng(logoBytes);
-    } catch {
-      embeddedLogo = await pdfDoc.embedJpg(logoBytes);
-    }
+    // ✒️ Embed the Logo
+    const embeddedLogo = await pdfDoc.embedPng(logoBytes);
     const logoDims = embeddedLogo.scale(0.35);
 
+    // 📝 Add the watermark to every page
     const pages = pdfDoc.getPages();
     for (const page of pages) {
       const { width, height } = page.getSize();
       for (let x = 0; x < width; x += (logoDims.width + 100)) {
         for (let y = 0; y < height; y += (logoDims.height + 100)) {
           page.drawImage(embeddedLogo, {
-            x, y,
+            x, 
+            y,
             width: logoDims.width,
             height: logoDims.height,
-            opacity: 0.15,
-            rotate: degrees(45)
+            rotate: degrees(45),
+            opacity: 0.15
           });
         }
       }
@@ -155,10 +152,12 @@ app.post("/watermark", async (req, res) => {
 
     const finalPdf = await pdfDoc.save();
 
+    // 📊 Update Usage
     await supabase.from("usage")
       .update({ pages_used: usage.pages_used + numPages })
       .eq("user_email", userEmail);
 
+    // 📥 Send the watermarked file
     res.setHeader("Content-Type", "application/pdf");
     res.setHeader("Content-Disposition", `attachment; filename="${file.name.replace('.pdf', '')}-protected.pdf"`);
     res.send(Buffer.from(finalPdf));
