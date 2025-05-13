@@ -130,21 +130,21 @@ app.post("/watermark", async (req, res) => {
 
     // ✒️ Embed the Logo
     const embeddedLogo = await pdfDoc.embedPng(logoBytes);
-    const logoDims = embeddedLogo.scale(0.35);
+    const logoDims = embeddedLogo.scale(0.2);
 
-    // 📝 Add the watermark to every page
+    // 📝 Draw the watermark on every page
     const pages = pdfDoc.getPages();
     for (const page of pages) {
       const { width, height } = page.getSize();
       for (let x = 0; x < width; x += (logoDims.width + 100)) {
         for (let y = 0; y < height; y += (logoDims.height + 100)) {
           page.drawImage(embeddedLogo, {
-            x, 
+            x,
             y,
             width: logoDims.width,
             height: logoDims.height,
             rotate: degrees(45),
-            opacity: 0.15
+            opacity: 0.2
           });
         }
       }
