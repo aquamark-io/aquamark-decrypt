@@ -141,17 +141,28 @@ app.post("/watermark", async (req, res) => {
     for (const page of pages) {
       const { width, height } = page.getSize();
       for (let x = 0; x < width; x += (logoDims.width + 100)) {
-        for (let y = 0; y < height; y += (logoDims.height + 100)) {
-          page.drawImage(embeddedLogo, {
-            x, y,
-            width: logoDims.width,
-            height: logoDims.height,
-            opacity: 0.15,
-            rotate: degrees(45)
-          });
-        }
-      }
+
+const pages = pdfDoc.getPages();
+for (const page of pages) {
+  const { width, height } = page.getSize();
+
+  // Create an XObject to embed the watermark
+  const xObject = pdfDoc.registerEmbeddedImage(embeddedLogo);
+
+  for (let x = 0; x < width; x += (logoDims.width + 100)) {
+    for (let y = 0; y < height; y += (logoDims.height + 100)) {
+      page.node.addXObject('WatermarkLogo', xObject);
+      page.node.drawXObject('WatermarkLogo', {
+        x, y,
+        width: logoDims.width,
+        height: logoDims.height,
+        rotate: degrees(45),
+        opacity: 0.15
+      });
     }
+  }
+}
+ }
 
     const finalPdf = await pdfDoc.save();
 
