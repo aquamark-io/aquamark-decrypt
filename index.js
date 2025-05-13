@@ -137,16 +137,6 @@ app.post("/watermark", async (req, res) => {
     }
     const logoDims = embeddedLogo.scale(0.35);
 
-    // Optional: hologram image
-    let hologramImage = null;
-    try {
-      const holoRes = await fetch("https://aquamark.io/hologram.png");
-      if (holoRes.ok) {
-        const holoBytes = await holoRes.arrayBuffer();
-        hologramImage = await pdfDoc.embedPng(holoBytes);
-      }
-    } catch {}
-
     const pages = pdfDoc.getPages();
     for (const page of pages) {
       const { width, height } = page.getSize();
@@ -160,16 +150,6 @@ app.post("/watermark", async (req, res) => {
             rotate: degrees(45)
           });
         }
-      }
-
-      if (hologramImage) {
-        page.drawImage(hologramImage, {
-          x: width - 55,
-          y: height - 55,
-          width: 45,
-          height: 45,
-          opacity: 0.7
-        });
       }
     }
 
