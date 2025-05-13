@@ -138,8 +138,8 @@ app.post("/watermark", async (req, res) => {
     const logoWidth = width * 0.2;
     const logoHeight = (logoWidth / watermarkImage.width) * watermarkImage.height;
 
-    for (let x = 0; x < width; x += (logoWidth + 50)) {
-      for (let y = 0; y < height; y += (logoHeight + 50)) {
+    for (let x = 0; x < width; x += (logoWidth + 100)) {
+      for (let y = 0; y < height; y += (logoHeight + 100)) {
         watermarkPage.drawImage(watermarkImage, {
           x,
           y,
