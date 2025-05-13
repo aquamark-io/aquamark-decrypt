@@ -166,6 +166,10 @@ app.post("/watermark", async (req, res) => {
 const newPagesUsed = usage.pages_used + numPages;
 const newPagesRemaining = usage.page_credits - newPagesUsed;
 
+console.log("Updating Usage:");
+console.log("Pages Used:", newPagesUsed);
+console.log("Pages Remaining:", newPagesRemaining);
+
 const { error } = await supabase.from("usage")
   .update({ 
     pages_used: newPagesUsed,
@@ -176,7 +180,6 @@ const { error } = await supabase.from("usage")
 if (error) {
   console.error("❌ Error updating usage data:", error.message);
 }
-
     res.setHeader("Content-Type", "application/pdf");
     res.setHeader("Content-Disposition", `attachment; filename="${file.name.replace('.pdf', '')}-protected.pdf"`);
     res.send(Buffer.from(finalPdf));
