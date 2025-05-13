@@ -128,26 +128,37 @@ app.post("/watermark", async (req, res) => {
     const logoRes = await fetch(logoUrlData.publicUrl);
     const logoBytes = await logoRes.arrayBuffer();
 
-    // ✒️ Embed the Logo as a Watermark
-    const embeddedLogo = await pdfDoc.embedPng(logoBytes);
-    const logoDims = embeddedLogo.scale(0.3);
+    // 📌 **Create Watermark Layer**
+    const watermarkDoc = await PDFDocument.create();
+    const watermarkImage = await watermarkDoc.embedPng(logoBytes);
 
-    const pages = pdfDoc.getPages();
-    for (const page of pages) {
-      const { width, height } = page.getSize();
-      for (let x = -50; x < width; x += (logoDims.width + 100)) {
-        for (let y = -50; y < height; y += (logoDims.height + 100)) {
-          page.drawImage(embeddedLogo, {
-            x,
-            y,
-            width: logoDims.width,
-            height: logoDims.height,
-            rotate: degrees(45),
-            opacity: 0.15,
-          });
-        }
+    const { width, height } = pdfDoc.getPages()[0].getSize();
+    const watermarkPage = watermarkDoc.addPage([width, height]);
+
+    const logoWidth = width * 0.2;
+    const logoHeight = (logoWidth / watermarkImage.width) * watermarkImage.height;
+
+    for (let x = 0; x < width; x += (logoWidth + 50)) {
+      for (let y = 0; y < height; y += (logoHeight + 50)) {
+        watermarkPage.drawImage(watermarkImage, {
+          x,
+          y,
+          width: logoWidth,
+          height: logoHeight,
+          opacity: 0.15,
+          rotate: degrees(45)
+        });
       }
     }
+
+    const watermarkPdfBytes = await watermarkDoc.save();
+    const watermarkEmbed = await PDFDocument.load(watermarkPdfBytes);
+    const [embeddedPage] = await pdfDoc.embedPages([watermarkEmbed.getPages()[0]]);
+
+    // 📌 **Overlay the watermark page on each page**
+    pdfDoc.getPages().forEach(page => {
+      page.drawPage(embeddedPage, { x: 0, y: 0, width, height });
+    });
 
     const finalPdf = await pdfDoc.save();
 
@@ -156,7 +167,6 @@ app.post("/watermark", async (req, res) => {
       .update({ pages_used: usage.pages_used + numPages })
       .eq("user_email", userEmail);
 
-    // 📥 Send the watermarked file
     res.setHeader("Content-Type", "application/pdf");
     res.setHeader("Content-Disposition", `attachment; filename="${file.name.replace('.pdf', '')}-protected.pdf"`);
     res.send(Buffer.from(finalPdf));
@@ -164,10 +174,6 @@ app.post("/watermark", async (req, res) => {
     console.error("❌ Watermark error:", err);
     res.status(500).send("Failed to process watermark: " + err.message);
   }
-});
-
-app.get("/", (req, res) => {
-  res.send("Aquamark Decryption & Watermarking API is running.");
 });
 
 app.listen(PORT, () => {
