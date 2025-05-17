@@ -192,13 +192,19 @@ app.post("/watermark", async (req, res) => {
     console.log(`Pages Used: ${newPagesUsed}`);
     console.log(`Pages Remaining: ${newPagesRemaining}`);
 
-    const { data, error } = await supabase.from("usage")
-      .update({ 
-        pages_used: newPagesUsed,
-        pages_remaining: newPagesRemaining
-      })
-      .eq("user_email", userEmail)
-      .select();
+    const now = new Date();
+const currentMonth = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}`;
+
+const { data, error } = await supabase
+  .from("usage")
+  .update({
+    pages_used: newPagesUsed,
+    pages_remaining: newPagesRemaining
+  })
+  .eq("user_email", userEmail)
+  .eq("month", currentMonth)
+  .select();
+
 
     if (error) {
       console.error("❌ Error updating usage data:", error.message);
