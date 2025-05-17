@@ -4,7 +4,7 @@ const cors = require("cors");
 const { exec } = require("child_process");
 const fs = require("fs");
 const path = require("path");
-const { PDFDocument, rgb, degrees } = require("pdf-lib");
+const { PDFDocument, rgb, degrees, StandardFonts } = require("pdf-lib");
 const fetch = require("node-fetch");
 const { createClient } = require("@supabase/supabase-js");
 
@@ -160,52 +160,52 @@ app.post("/watermark", async (req, res) => {
       page.drawPage(embeddedPage, { x: 0, y: 0, width, height });
     });
 
-// 🏷️ Embed Lender Name in center of each page if provided
-const lenderName = req.body.lender?.trim();
-if (lenderName) {
-  const font = await pdfDoc.embedFont(PDFDocument.PDFFont.Helvetica);
-  const fontSize = 18;
-  const color = rgb(0.2, 0.2, 0.2); // light grey
-  const opacity = 0.2;
+    // 🏷️ Embed Lender Name in center of each page if provided
+    const lenderName = req.body.lender?.trim();
+    if (lenderName) {
+      const font = await pdfDoc.embedFont(StandardFonts.Helvetica);
+      const fontSize = 18;
+      const color = rgb(0.2, 0.2, 0.2); // light grey
+      const opacity = 0.2;
 
-  pdfDoc.getPages().forEach(page => {
-    const { width, height } = page.getSize();
-    page.drawText(lenderName, {
-      x: width / 2 - (font.widthOfTextAtSize(lenderName, fontSize) / 2),
-      y: height / 2,
-      size: fontSize,
-      font,
-      color,
-      opacity,
-      rotate: degrees(0),
-    });
-  });
-}
+      pdfDoc.getPages().forEach(page => {
+        const { width, height } = page.getSize();
+        page.drawText(lenderName, {
+          x: width / 2 - (font.widthOfTextAtSize(lenderName, fontSize) / 2),
+          y: height / 2,
+          size: fontSize,
+          font,
+          color,
+          opacity,
+          rotate: degrees(0),
+        });
+      });
+    }
 
-         
     const finalPdf = await pdfDoc.save();
 
     // 📊 Update Usage Tracking
-const newPagesUsed = usage.pages_used + numPages;
-const newPagesRemaining = usage.page_credits - newPagesUsed;
+    const newPagesUsed = usage.pages_used + numPages;
+    const newPagesRemaining = usage.page_credits - newPagesUsed;
 
-console.log(`Updating usage for ${userEmail}:`);
-console.log(`Pages Used: ${newPagesUsed}`);
-console.log(`Pages Remaining: ${newPagesRemaining}`);
+    console.log(`Updating usage for ${userEmail}:`);
+    console.log(`Pages Used: ${newPagesUsed}`);
+    console.log(`Pages Remaining: ${newPagesRemaining}`);
 
-const { data, error } = await supabase.from("usage")
-  .update({ 
-    pages_used: newPagesUsed,
-    pages_remaining: newPagesRemaining
-  })
-  .eq("user_email", userEmail)
-  .select(); // Add .select() to force the update to return data
+    const { data, error } = await supabase.from("usage")
+      .update({ 
+        pages_used: newPagesUsed,
+        pages_remaining: newPagesRemaining
+      })
+      .eq("user_email", userEmail)
+      .select();
 
-if (error) {
-  console.error("❌ Error updating usage data:", error.message);
-} else {
-  console.log("✅ Usage data updated successfully:", data);
-}
+    if (error) {
+      console.error("❌ Error updating usage data:", error.message);
+    } else {
+      console.log("✅ Usage data updated successfully:", data);
+    }
+
     res.setHeader("Content-Type", "application/pdf");
     res.setHeader("Content-Disposition", `attachment; filename="${file.name.replace('.pdf', '')}-protected.pdf"`);
     res.send(Buffer.from(finalPdf));
