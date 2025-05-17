@@ -202,7 +202,7 @@ const { data, error } = await supabase
     pages_remaining: newPagesRemaining
   })
   .eq("user_email", userEmail)
-  .eq("month", currentMonth)
+  
   .select();
 
 
