@@ -195,15 +195,21 @@ app.post("/watermark", async (req, res) => {
     const now = new Date();
 const currentMonth = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}`;
 
-const { data, error } = await supabase
-  .from("usage")
+
+const { error: updateError } = await supabase
+  .from('usage')
   .update({
     pages_used: newPagesUsed,
     pages_remaining: newPagesRemaining
   })
-  .eq("user_email", userEmail)
-  
-  .select();
+  .eq('user_email', userEmail);
+
+if (updateError) {
+  console.error("❌ Error updating usage data:", updateError.message);
+} else {
+  console.log(`✅ Updated total usage for ${userEmail}: +${numPages} pages`);
+}
+
 
 
     if (error) {
