@@ -160,6 +160,29 @@ app.post("/watermark", async (req, res) => {
       page.drawPage(embeddedPage, { x: 0, y: 0, width, height });
     });
 
+// 🏷️ Embed Lender Name in center of each page if provided
+const lenderName = req.body.lender?.trim();
+if (lenderName) {
+  const font = await pdfDoc.embedFont(PDFDocument.PDFFont.Helvetica);
+  const fontSize = 18;
+  const color = rgb(0.2, 0.2, 0.2); // light grey
+  const opacity = 0.2;
+
+  pdfDoc.getPages().forEach(page => {
+    const { width, height } = page.getSize();
+    page.drawText(lenderName, {
+      x: width / 2 - (font.widthOfTextAtSize(lenderName, fontSize) / 2),
+      y: height / 2,
+      size: fontSize,
+      font,
+      color,
+      opacity,
+      rotate: degrees(0),
+    });
+  });
+}
+
+         
     const finalPdf = await pdfDoc.save();
 
     // 📊 Update Usage Tracking
