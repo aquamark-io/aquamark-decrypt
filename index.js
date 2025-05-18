@@ -136,38 +136,6 @@ if (lender) {
       page.drawPage(embeddedPage, { x: 0, y: 0, width, height });
     });
 
-    // 🖋️ **Embed lender name bottom right**
-    if (lender) {
-      const lenderImg = PImage.make(300, 40);
-      const ctx = lenderImg.getContext('2d');
-      ctx.fillStyle = '#000000';
-      ctx.fillRect(0, 0, 300, 40);
-      ctx.fillStyle = '#FFFFFF';
-      ctx.font = '20pt Arial';
-      ctx.fillText(lender, 10, 28);
-      const stream = new require('stream').PassThrough();
-      await PImage.encodePNGToStream(lenderImg, stream);
-      const chunks = [];
-      await new Promise((resolve) => {
-        stream.on('data', chunk => chunks.push(chunk));
-        stream.on('end', resolve);
-      });
-      const pngBuffer = Buffer.concat(chunks);
-      const lenderImage = await pdfDoc.embedPng(pngBuffer);
-
-      // Draw on each page
-      const lenderDims = lenderImage.scale(0.5);
-      pdfDoc.getPages().forEach(page => {
-        const { width, height } = page.getSize();
-        page.drawImage(lenderImage, {
-          x: width - lenderDims.width - 20,
-          y: 20,
-          width: lenderDims.width,
-          height: lenderDims.height,
-          opacity: 0.4
-        });
-      });
-    }
 
     const finalPdf = await pdfDoc.save();
 
