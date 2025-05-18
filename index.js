@@ -4,7 +4,7 @@ const cors = require("cors");
 const { exec } = require("child_process");
 const fs = require("fs");
 const path = require("path");
-const { PDFDocument, rgb, degrees } = require("pdf-lib");
+const { PDFDocument, rgb, degrees, StandardFonts } = require('pdf-lib');
 const fetch = require("node-fetch");
 const { createClient } = require("@supabase/supabase-js");
 
