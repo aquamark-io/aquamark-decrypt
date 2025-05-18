@@ -7,6 +7,7 @@ const path = require("path");
 const { PDFDocument, rgb, degrees } = require("pdf-lib");
 const fetch = require("node-fetch");
 const { createClient } = require("@supabase/supabase-js");
+const PImage = require("pureimage"); // ✅ NEW
 
 const app = express();
 const PORT = process.env.PORT || 10000;
@@ -17,47 +18,6 @@ const supabase = createClient(SUPABASE_URL, SUPABASE_KEY);
 
 app.use(cors());
 app.use(fileUpload());
-
-/* -----------------------------
-   🔓 Decrypt Endpoint
------------------------------ */
-app.post("/decrypt", async (req, res) => {
-  if (!req.files || !req.files.file) {
-    return res.status(400).send("No file uploaded.");
-  }
-
-  const uploadedFile = req.files.file;
-  const tempId = Date.now();
-  const inputPath = path.join(__dirname, `temp-${tempId}.pdf`);
-  const outputPath = path.join(__dirname, `temp-${tempId}-decrypted.pdf`);
-
-  try {
-    await uploadedFile.mv(inputPath);
-  } catch (moveErr) {
-    console.error("❌ Failed to save uploaded file:", moveErr);
-    return res.status(500).send("Could not save uploaded PDF.");
-  }
-
-  exec(`qpdf --decrypt "${inputPath}" "${outputPath}"`, (error) => {
-    if (error) {
-      console.error("❌ QPDF Error:", error.message);
-      fs.unlinkSync(inputPath);
-      return res.status(500).send("Failed to decrypt PDF.");
-    }
-
-    try {
-      const decryptedBuffer = fs.readFileSync(outputPath);
-      res.setHeader("Content-Type", "application/pdf");
-      res.send(decryptedBuffer);
-    } catch (readErr) {
-      console.error("❌ Failed to read decrypted file:", readErr.message);
-      res.status(500).send("Failed to read decrypted PDF.");
-    } finally {
-      fs.unlinkSync(inputPath);
-      fs.unlinkSync(outputPath);
-    }
-  });
-});
 
 /* -----------------------------
    💧 Watermark Endpoint
@@ -74,11 +34,9 @@ app.post("/watermark", async (req, res) => {
   }
 
   if (!req.files || !req.files.file || !req.body.user_email) {
-  return res.status(400).send('Missing file or user_email');
-}
-const lender = req.body.lender || null;
-
-
+    return res.status(400).send('Missing file or user_email');
+  }
+  const lender = req.body.lender || null;
   const userEmail = req.body.user_email;
   const file = req.files.file;
 
@@ -162,29 +120,63 @@ const lender = req.body.lender || null;
       page.drawPage(embeddedPage, { x: 0, y: 0, width, height });
     });
 
+    // 🖋️ **Embed lender name bottom right**
+    if (lender) {
+      const lenderImg = PImage.make(300, 40);
+      const ctx = lenderImg.getContext('2d');
+      ctx.fillStyle = '#000000';
+      ctx.fillRect(0, 0, 300, 40);
+      ctx.fillStyle = '#FFFFFF';
+      ctx.font = '20pt Arial';
+      ctx.fillText(lender, 10, 28);
+      const stream = new require('stream').PassThrough();
+      await PImage.encodePNGToStream(lenderImg, stream);
+      const chunks = [];
+      await new Promise((resolve) => {
+        stream.on('data', chunk => chunks.push(chunk));
+        stream.on('end', resolve);
+      });
+      const pngBuffer = Buffer.concat(chunks);
+      const lenderImage = await pdfDoc.embedPng(pngBuffer);
+
+      // Draw on each page
+      const lenderDims = lenderImage.scale(0.5);
+      pdfDoc.getPages().forEach(page => {
+        const { width, height } = page.getSize();
+        page.drawImage(lenderImage, {
+          x: width - lenderDims.width - 20,
+          y: 20,
+          width: lenderDims.width,
+          height: lenderDims.height,
+          opacity: 0.4
+        });
+      });
+    }
+
     const finalPdf = await pdfDoc.save();
 
     // 📊 Update Usage Tracking
-const newPagesUsed = usage.pages_used + numPages;
-const newPagesRemaining = usage.page_credits - newPagesUsed;
+    const newPagesUsed = usage.pages_used + numPages;
+    const newPagesRemaining = usage.page_credits - newPagesUsed;
 
-console.log(`Updating usage for ${userEmail}:`);
-console.log(`Pages Used: ${newPagesUsed}`);
-console.log(`Pages Remaining: ${newPagesRemaining}`);
+    console.log(`Updating usage for ${userEmail}:`);
+    console.log(`Pages Used: ${newPagesUsed}`);
+    console.log(`Pages Remaining: ${newPagesRemaining}`);
 
-const { data, error } = await supabase.from("usage")
-  .update({ 
-    pages_used: newPagesUsed,
-    pages_remaining: newPagesRemaining
-  })
-  .eq("user_email", userEmail)
-  .select(); // Add .select() to force the update to return data
+    const { data, error } = await supabase.from("usage")
+      .update({ 
+        pages_used: newPagesUsed,
+        pages_remaining: newPagesRemaining
+      })
+      .eq("user_email", userEmail)
+      .select();
 
-if (error) {
-  console.error("❌ Error updating usage data:", error.message);
-} else {
-  console.log("✅ Usage data updated successfully:", data);
-}
+    if (error) {
+      console.error("❌ Error updating usage data:", error.message);
+    } else {
+      console.log("✅ Usage data updated successfully:", data);
+    }
+
     res.setHeader("Content-Type", "application/pdf");
     res.setHeader("Content-Disposition", `attachment; filename="${file.name.replace('.pdf', '')}-protected.pdf"`);
     res.send(Buffer.from(finalPdf));
