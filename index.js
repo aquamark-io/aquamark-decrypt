@@ -73,7 +73,7 @@ app.post("/watermark", async (req, res) => {
     return res.status(401).send("Invalid API key.");
   }
 
-  if (!req.files || !req.files.file || !req.body.user_email || !req.body.lender) {
+if (!req.files || !req.files.file || !req.body.user_email) {
     return res.status(400).send("Missing required fields: file and user_email.");
   }
 
