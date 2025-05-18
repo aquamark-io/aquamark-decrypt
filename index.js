@@ -154,34 +154,30 @@ const lender = req.body.lender || null;
     }
 
 if (lender) {
-  const canvas = require("canvas");
-  const { createCanvas } = canvas;
-  const lenderCanvas = createCanvas(500, 100);
-  const ctx = lenderCanvas.getContext("2d");
+  const { PDFImage } = require("pdf-lib");
+  const svgToImg = require("svg-to-img");
 
-  ctx.fillStyle = "white";
-  ctx.fillRect(0, 0, lenderCanvas.width, lenderCanvas.height);
+  const lenderSvg = `
+    <svg width="500" height="100" xmlns="http://www.w3.org/2000/svg">
+      <rect width="500" height="100" fill="white"/>
+      <text x="50%" y="50%" dominant-baseline="middle" text-anchor="middle"
+            font-family="Arial" font-size="28" font-weight="bold" fill="black">
+        ${lender}
+      </text>
+    </svg>
+  `;
 
-  ctx.fillStyle = "black";
-  ctx.font = "bold 32px Sans";
-  ctx.textAlign = "center";
-  ctx.textBaseline = "middle";
-  ctx.fillText(lender, lenderCanvas.width / 2, lenderCanvas.height / 2);
-
-  const lenderBuffer = lenderCanvas.toBuffer("image/png");
+  const lenderBuffer = await svgToImg.from(lenderSvg).toPng({ width: 500, height: 100 });
   const lenderImage = await watermarkDoc.embedPng(lenderBuffer);
 
-  // Draw lender name dead-center on the watermark page
   watermarkPage.drawImage(lenderImage, {
     x: (width - 250),
     y: (height / 2) - 25,
     width: 250,
     height: 50,
     opacity: 0.3,
-    rotate: degrees(0),
   });
 }
-
      
     const watermarkPdfBytes = await watermarkDoc.save();
     const watermarkEmbed = await PDFDocument.load(watermarkPdfBytes);
