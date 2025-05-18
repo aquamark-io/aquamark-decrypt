@@ -74,8 +74,10 @@ app.post("/watermark", async (req, res) => {
   }
 
   if (!req.files || !req.files.file || !req.body.user_email) {
-    return res.status(400).send("Missing required fields: file and user_email.");
-  }
+  return res.status(400).send('Missing file or user_email');
+}
+const lender = req.body.lender || null;
+
 
   const userEmail = req.body.user_email;
   const file = req.files.file;
