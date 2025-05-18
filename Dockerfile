@@ -1,14 +1,7 @@
 FROM node:18-slim
 
-# Install qpdf and canvas dependencies
-RUN apt-get update && apt-get install -y \
-  qpdf \
-  libcairo2-dev \
-  libjpeg-dev \
-  libpango1.0-dev \
-  libgif-dev \
-  librsvg2-dev \
-  && rm -rf /var/lib/apt/lists/*
+# Install qpdf
+RUN apt-get update && apt-get install -y qpdf
 
 # Create app directory
 WORKDIR /usr/src/app
