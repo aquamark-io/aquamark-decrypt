@@ -153,6 +153,36 @@ const lender = req.body.lender || null;
       }
     }
 
+if (lender) {
+  const canvas = require("canvas");
+  const { createCanvas } = canvas;
+  const lenderCanvas = createCanvas(500, 100);
+  const ctx = lenderCanvas.getContext("2d");
+
+  ctx.fillStyle = "white";
+  ctx.fillRect(0, 0, lenderCanvas.width, lenderCanvas.height);
+
+  ctx.fillStyle = "black";
+  ctx.font = "bold 32px Sans";
+  ctx.textAlign = "center";
+  ctx.textBaseline = "middle";
+  ctx.fillText(lender, lenderCanvas.width / 2, lenderCanvas.height / 2);
+
+  const lenderBuffer = lenderCanvas.toBuffer("image/png");
+  const lenderImage = await watermarkDoc.embedPng(lenderBuffer);
+
+  // Draw lender name dead-center on the watermark page
+  watermarkPage.drawImage(lenderImage, {
+    x: (width - 250),
+    y: (height / 2) - 25,
+    width: 250,
+    height: 50,
+    opacity: 0.3,
+    rotate: degrees(0),
+  });
+}
+
+     
     const watermarkPdfBytes = await watermarkDoc.save();
     const watermarkEmbed = await PDFDocument.load(watermarkPdfBytes);
     const [embeddedPage] = await pdfDoc.embedPages([watermarkEmbed.getPages()[0]]);
