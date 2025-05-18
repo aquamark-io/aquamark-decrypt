@@ -4,7 +4,7 @@ const cors = require("cors");
 const { exec } = require("child_process");
 const fs = require("fs");
 const path = require("path");
-const { PDFDocument, rgb, degrees, StandardFonts } = require("pdf-lib");
+const { PDFDocument, rgb, degrees } = require("pdf-lib");
 const fetch = require("node-fetch");
 const { createClient } = require("@supabase/supabase-js");
 
@@ -19,12 +19,53 @@ app.use(cors());
 app.use(fileUpload());
 
 /* -----------------------------
+   🔓 Decrypt Endpoint
+----------------------------- */
+app.post("/decrypt", async (req, res) => {
+  if (!req.files || !req.files.file) {
+    return res.status(400).send("No file uploaded.");
+  }
+
+  const uploadedFile = req.files.file;
+  const tempId = Date.now();
+  const inputPath = path.join(__dirname, `temp-${tempId}.pdf`);
+  const outputPath = path.join(__dirname, `temp-${tempId}-decrypted.pdf`);
+
+  try {
+    await uploadedFile.mv(inputPath);
+  } catch (moveErr) {
+    console.error("❌ Failed to save uploaded file:", moveErr);
+    return res.status(500).send("Could not save uploaded PDF.");
+  }
+
+  exec(`qpdf --decrypt "${inputPath}" "${outputPath}"`, (error) => {
+    if (error) {
+      console.error("❌ QPDF Error:", error.message);
+      fs.unlinkSync(inputPath);
+      return res.status(500).send("Failed to decrypt PDF.");
+    }
+
+    try {
+      const decryptedBuffer = fs.readFileSync(outputPath);
+      res.setHeader("Content-Type", "application/pdf");
+      res.send(decryptedBuffer);
+    } catch (readErr) {
+      console.error("❌ Failed to read decrypted file:", readErr.message);
+      res.status(500).send("Failed to read decrypted PDF.");
+    } finally {
+      fs.unlinkSync(inputPath);
+      fs.unlinkSync(outputPath);
+    }
+  });
+});
+
+/* -----------------------------
    💧 Watermark Endpoint
 ----------------------------- */
 app.post("/watermark", async (req, res) => {
   const authHeader = req.headers["authorization"];
   if (!authHeader || !authHeader.startsWith("Bearer ")) {
-    return res.status(401).send("Missing or invalid authorization token."); 
+    return res.status(401).send("Missing or invalid authorization token.");
   }
 
   const token = authHeader.split(" ")[1];
@@ -33,9 +74,11 @@ app.post("/watermark", async (req, res) => {
   }
 
   if (!req.files || !req.files.file || !req.body.user_email) {
-    return res.status(400).send('Missing file or user_email');
-  }
-  const lender = req.body.lender || null;
+  return res.status(400).send('Missing file or user_email');
+}
+const lender = req.body.lender || null;
+
+
   const userEmail = req.body.user_email;
   const file = req.files.file;
 
@@ -110,32 +153,6 @@ app.post("/watermark", async (req, res) => {
       }
     }
 
-// 🖋️ Draw lender name in bottom-right corner if provided
-const text2png = require('text2png');
-
-if (lender) {
-  const pngBuffer = text2png(lender, {
-    font: '20px sans-serif',
-    color: 'white',
-    backgroundColor: 'black',
-    padding: 10,
-    lineSpacing: 10,
-    output: 'buffer',
-  });
-
-  const lenderImage = await watermarkDoc.embedPng(pngBuffer);
-  const imgDims = lenderImage.scale(1);
-
-  watermarkPage.drawImage(lenderImage, {
-    x: width - imgDims.width - 20,
-    y: 20,
-    width: imgDims.width,
-    height: imgDims.height,
-    opacity: 0.5,
-  });
-}
-
-
     const watermarkPdfBytes = await watermarkDoc.save();
     const watermarkEmbed = await PDFDocument.load(watermarkPdfBytes);
     const [embeddedPage] = await pdfDoc.embedPages([watermarkEmbed.getPages()[0]]);
@@ -145,31 +162,29 @@ if (lender) {
       page.drawPage(embeddedPage, { x: 0, y: 0, width, height });
     });
 
-
     const finalPdf = await pdfDoc.save();
 
     // 📊 Update Usage Tracking
-    const newPagesUsed = usage.pages_used + numPages;
-    const newPagesRemaining = usage.page_credits - newPagesUsed;
+const newPagesUsed = usage.pages_used + numPages;
+const newPagesRemaining = usage.page_credits - newPagesUsed;
 
-    console.log(`Updating usage for ${userEmail}:`);
-    console.log(`Pages Used: ${newPagesUsed}`);
-    console.log(`Pages Remaining: ${newPagesRemaining}`);
+console.log(`Updating usage for ${userEmail}:`);
+console.log(`Pages Used: ${newPagesUsed}`);
+console.log(`Pages Remaining: ${newPagesRemaining}`);
 
-    const { data, error } = await supabase.from("usage")
-      .update({ 
-        pages_used: newPagesUsed,
-        pages_remaining: newPagesRemaining
-      })
-      .eq("user_email", userEmail)
-      .select();
+const { data, error } = await supabase.from("usage")
+  .update({ 
+    pages_used: newPagesUsed,
+    pages_remaining: newPagesRemaining
+  })
+  .eq("user_email", userEmail)
+  .select(); // Add .select() to force the update to return data
 
-    if (error) {
-      console.error("❌ Error updating usage data:", error.message);
-    } else {
-      console.log("✅ Usage data updated successfully:", data);
-    }
-
+if (error) {
+  console.error("❌ Error updating usage data:", error.message);
+} else {
+  console.log("✅ Usage data updated successfully:", data);
+}
     res.setHeader("Content-Type", "application/pdf");
     res.setHeader("Content-Disposition", `attachment; filename="${file.name.replace('.pdf', '')}-protected.pdf"`);
     res.send(Buffer.from(finalPdf));
