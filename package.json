@@ -25,6 +25,5 @@
   "pdf-lib": "^1.17.1",
   "node-fetch": "^2.6.7",
   "@supabase/supabase-js": "^2.39.6"
-   "canvas": "^2.11.2"
 }
 }
