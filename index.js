@@ -73,12 +73,11 @@ app.post("/watermark", async (req, res) => {
     return res.status(401).send("Invalid API key.");
   }
 
-if (!req.files || !req.files.file || !req.body.user_email) {
+  if (!req.files || !req.files.file || !req.body.user_email) {
     return res.status(400).send("Missing required fields: file and user_email.");
   }
 
   const userEmail = req.body.user_email;
-   const lender = req.body.lender;
   const file = req.files.file;
 
   try {
@@ -152,38 +151,6 @@ if (!req.files || !req.files.file || !req.body.user_email) {
       }
     }
 
-if (lender) {
-  const canvas = require("canvas");
-  const { createCanvas } = canvas;
-
-  const textCanvas = createCanvas(800, 150);
-  const ctx = textCanvas.getContext("2d");
-  ctx.fillStyle = "rgba(50, 50, 50, 0.15)";
-  ctx.font = "16px Helvetica";
-  ctx.textAlign = "center";
-  ctx.textBaseline = "middle";
-  ctx.fillText(lender, 400, 75);
-
-  const dataUrl = textCanvas.toDataURL();
-  const pngBuffer = Buffer.from(dataUrl.split(",")[1], "base64");
-  const textImage = await watermarkDoc.embedPng(pngBuffer);
-  const textDims = textImage.scale(1);
-
-  const verticalSpacing = height / 5;
-  const centerX = (width - textDims.width) / 2;
-
-  for (let i = 1; i <= 4; i++) {
-    const y = verticalSpacing * i - textDims.height / 2;
-    watermarkPage.drawImage(textImage, {
-      x: centerX,
-      y: y,
-      width: textDims.width,
-      height: textDims.height
-    });
-  }
-}
-
-     
     const watermarkPdfBytes = await watermarkDoc.save();
     const watermarkEmbed = await PDFDocument.load(watermarkPdfBytes);
     const [embeddedPage] = await pdfDoc.embedPages([watermarkEmbed.getPages()[0]]);
