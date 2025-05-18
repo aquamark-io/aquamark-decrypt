@@ -154,27 +154,18 @@ const lender = req.body.lender || null;
     }
 
 if (lender) {
-  const { PDFImage } = require("pdf-lib");
-  const svgToImg = require("svg-to-img");
+  const font = await watermarkDoc.embedFont(StandardFonts.HelveticaBold);
+  const fontSize = 28;
+  const textWidth = font.widthOfTextAtSize(lender, fontSize);
+  const textHeight = font.heightAtSize(fontSize);
 
-  const lenderSvg = `
-    <svg width="500" height="100" xmlns="http://www.w3.org/2000/svg">
-      <rect width="500" height="100" fill="white"/>
-      <text x="50%" y="50%" dominant-baseline="middle" text-anchor="middle"
-            font-family="Arial" font-size="28" font-weight="bold" fill="black">
-        ${lender}
-      </text>
-    </svg>
-  `;
-
-  const lenderBuffer = await svgToImg.from(lenderSvg).toPng({ width: 500, height: 100 });
-  const lenderImage = await watermarkDoc.embedPng(lenderBuffer);
-
-  watermarkPage.drawImage(lenderImage, {
-    x: (width - 250),
-    y: (height / 2) - 25,
-    width: 250,
-    height: 50,
+  watermarkPage.drawText(lender, {
+    x: (width - textWidth) / 2,
+    y: (height - textHeight) / 2,
+    size: fontSize,
+    font: font,
+    color: rgb(0, 0, 0),
+    rotate: degrees(-15),
     opacity: 0.3,
   });
 }
