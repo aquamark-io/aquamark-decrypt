@@ -138,11 +138,10 @@ app.post("/watermark", async (req, res) => {
     const logoWidth = width * 0.2;
     const logoHeight = (logoWidth / watermarkImage.width) * watermarkImage.height;
 
-     const yShift = -30; // move watermarks up by 30 units
-     for (let x = 0; x < width; x += (logoWidth + 150)) {
+    for (let x = 0; x < width; x += (logoWidth + 150)) {
       for (let y = 0; y < height; y += (logoHeight + 150)) {
         watermarkPage.drawImage(watermarkImage, {
-          y: y + yShift,
+          x,
           y,
           width: logoWidth,
           height: logoHeight,
