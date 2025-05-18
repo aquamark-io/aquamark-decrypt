@@ -111,22 +111,31 @@ app.post("/watermark", async (req, res) => {
     }
 
 // 🖋️ Draw lender name in bottom-right corner if provided
-if (lender) {
-  const font = await watermarkDoc.embedFont(StandardFonts.Helvetica);
-  const fontSize = 18;
-  const textWidth = font.widthOfTextAtSize(lender, fontSize);
-  const textHeight = font.heightAtSize(fontSize);
+const text2png = require('text2png');
 
-  watermarkPage.drawText(lender, {
-    x: width - textWidth - 30,
-    y: 30,
-    size: fontSize,
-    font,
-    color: rgb(0.2, 0.2, 0.2),
+if (lender) {
+  const pngBuffer = text2png(lender, {
+    font: '20px sans-serif',
+    color: 'white',
+    backgroundColor: 'black',
+    padding: 10,
+    lineSpacing: 10,
+    output: 'buffer',
+  });
+
+  const lenderImage = await watermarkDoc.embedPng(pngBuffer);
+  const imgDims = lenderImage.scale(1);
+
+  watermarkPage.drawImage(lenderImage, {
+    x: width - imgDims.width - 20,
+    y: 20,
+    width: imgDims.width,
+    height: imgDims.height,
     opacity: 0.5,
   });
 }
- 
+
+
     const watermarkPdfBytes = await watermarkDoc.save();
     const watermarkEmbed = await PDFDocument.load(watermarkPdfBytes);
     const [embeddedPage] = await pdfDoc.embedPages([watermarkEmbed.getPages()[0]]);
