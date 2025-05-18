@@ -7,7 +7,6 @@ const path = require("path");
 const { PDFDocument, rgb, degrees } = require("pdf-lib");
 const fetch = require("node-fetch");
 const { createClient } = require("@supabase/supabase-js");
-const PImage = require("pureimage"); // ✅ NEW
 
 const app = express();
 const PORT = process.env.PORT || 10000;
@@ -25,7 +24,7 @@ app.use(fileUpload());
 app.post("/watermark", async (req, res) => {
   const authHeader = req.headers["authorization"];
   if (!authHeader || !authHeader.startsWith("Bearer ")) {
-    return res.status(401).send("Missing or invalid authorization token.");
+    return res.status(401).send("Missing or invalid authorization token."); 
   }
 
   const token = authHeader.split(" ")[1];
