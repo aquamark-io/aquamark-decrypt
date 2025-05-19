@@ -134,11 +134,6 @@ const lender = req.body.lender || null;
     const watermarkDoc = await PDFDocument.create();
     const watermarkImage = await watermarkDoc.embedPng(logoBytes);
 
-   let lenderImage;
-if (lenderImageBuffer) {
-  lenderImage = await watermarkDoc.embedPng(lenderImageBuffer);
-}
-
     const { width, height } = pdfDoc.getPages()[0].getSize();
     const watermarkPage = watermarkDoc.addPage([width, height]);
 
