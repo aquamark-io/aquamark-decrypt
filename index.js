@@ -152,20 +152,6 @@ const lender = req.body.lender || null;
         });
       }
     }
-
-if (lenderImage) {
-  const textDims = lenderImage.scale(1); // scale factor = 1 for original size
-  const centerX = (width - textDims.width) / 2;
-  const centerY = (height - textDims.height) / 2;
-
-  watermarkPage.drawImage(lenderImage, {
-    x: centerX,
-    y: centerY,
-    width: textDims.width,
-    height: textDims.height,
-    opacity: 0.15,
-  });
-}
      
     const watermarkPdfBytes = await watermarkDoc.save();
     const watermarkEmbed = await PDFDocument.load(watermarkPdfBytes);
