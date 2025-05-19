@@ -137,7 +137,7 @@ if (lender) {
   const ctx = canvas.getContext('2d');
 
   ctx.fillStyle = 'rgba(50, 50, 50, 0.15)';
-  ctx.font = '10px Helvetica';
+  ctx.font = 'bold 10px sans-serif';
   ctx.textAlign = 'center';
   ctx.textBaseline = 'middle';
   ctx.fillText(lender, canvas.width / 2, canvas.height / 2);
