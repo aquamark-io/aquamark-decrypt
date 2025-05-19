@@ -124,17 +124,21 @@ app.post("/watermark", async (req, res) => {
     const qrImage = await pdfDoc.embedPng(qrImageBytes);
 
     // ⬇️ Embed QR on all pages, bottom-right
-    const qrSize = 100;
-    pdfDoc.getPages().forEach((page) => {
-      const { width, height } = page.getSize();
-      page.drawImage(qrImage, {
-        x: width - qrSize - 20,
-        y: 20,
-        width: qrSize,
-        height: qrSize,
-        opacity: 0.4,
-      });
-    });
+const qrSize = 70; // Was 100, now smaller
+const pages = pdfDoc.getPages();
+
+pages.forEach((page) => {
+  const { width, height } = page.getSize();
+  page.drawImage(qrImage, {
+    x: width - qrSize - 15,
+    y: 15,
+    width: qrSize,
+    height: qrSize,
+    opacity: 0.4,
+    // Embed directly into content stream (default behavior)
+    // Just ensure no annotations or layering logic is used
+  });
+});
 
     // 📈 Track usage
     const newPagesUsed = usage.pages_used + numPages;
