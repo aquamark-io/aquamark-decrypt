@@ -117,7 +117,7 @@ const qrImageBytes = Buffer.from(qrDataUrl.split(",")[1], "base64");
 const qrImage = await watermarkDoc.embedPng(qrImageBytes);
 
 // 🧷 Add QR to same watermark page (bottom-right)
-const qrSize = 70;
+const qrSize = 30;
 watermarkPage.drawImage(qrImage, {
   x: width - qrSize - 15,
   y: 15,
