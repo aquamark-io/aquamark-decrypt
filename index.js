@@ -7,6 +7,7 @@ const path = require("path");
 const { PDFDocument, rgb, degrees } = require("pdf-lib");
 const fetch = require("node-fetch");
 const { createClient } = require("@supabase/supabase-js");
+const QRCode = require("qrcode"); // ✅ Added for QR code generation
 
 const app = express();
 const PORT = process.env.PORT || 10000;
@@ -18,50 +19,6 @@ const supabase = createClient(SUPABASE_URL, SUPABASE_KEY);
 app.use(cors());
 app.use(fileUpload());
 
-/* -----------------------------
-   🔓 Decrypt Endpoint
------------------------------ */
-app.post("/decrypt", async (req, res) => {
-  if (!req.files || !req.files.file) {
-    return res.status(400).send("No file uploaded.");
-  }
-
-  const uploadedFile = req.files.file;
-  const tempId = Date.now();
-  const inputPath = path.join(__dirname, `temp-${tempId}.pdf`);
-  const outputPath = path.join(__dirname, `temp-${tempId}-decrypted.pdf`);
-
-  try {
-    await uploadedFile.mv(inputPath);
-  } catch (moveErr) {
-    console.error("❌ Failed to save uploaded file:", moveErr);
-    return res.status(500).send("Could not save uploaded PDF.");
-  }
-
-  exec(`qpdf --decrypt "${inputPath}" "${outputPath}"`, (error) => {
-    if (error) {
-      console.error("❌ QPDF Error:", error.message);
-      fs.unlinkSync(inputPath);
-      return res.status(500).send("Failed to decrypt PDF.");
-    }
-
-    try {
-      const decryptedBuffer = fs.readFileSync(outputPath);
-      res.setHeader("Content-Type", "application/pdf");
-      res.send(decryptedBuffer);
-    } catch (readErr) {
-      console.error("❌ Failed to read decrypted file:", readErr.message);
-      res.status(500).send("Failed to read decrypted PDF.");
-    } finally {
-      fs.unlinkSync(inputPath);
-      fs.unlinkSync(outputPath);
-    }
-  });
-});
-
-/* -----------------------------
-   💧 Watermark Endpoint
------------------------------ */
 app.post("/watermark", async (req, res) => {
   const authHeader = req.headers["authorization"];
   if (!authHeader || !authHeader.startsWith("Bearer ")) {
@@ -74,16 +31,15 @@ app.post("/watermark", async (req, res) => {
   }
 
   if (!req.files || !req.files.file || !req.body.user_email) {
-  return res.status(400).send('Missing file or user_email');
-}
-const lender = req.body.lender || null;
-
+    return res.status(400).send("Missing file or user_email");
+  }
 
   const userEmail = req.body.user_email;
+  const lender = req.body.lender || "N/A";
   const file = req.files.file;
 
   try {
-    // 🗄️ Load PDF (or decrypt if encrypted)
+    // 🗄️ Decrypt if needed
     let pdfBytes = file.data;
     try {
       await PDFDocument.load(pdfBytes, { ignoreEncryption: false });
@@ -105,7 +61,7 @@ const lender = req.body.lender || null;
 
     const pdfDoc = await PDFDocument.load(pdfBytes, { ignoreEncryption: true });
 
-    // 🔍 Check Usage Data
+    // 📊 Check usage
     const { data: usage, error: usageErr } = await supabase
       .from("usage")
       .select("*")
@@ -118,7 +74,7 @@ const lender = req.body.lender || null;
       return res.status(402).send("Not enough page credits.");
     }
 
-    // 🎯 Get Logo
+    // 🖼️ Get logo from Supabase
     const { data: logoList } = await supabase.storage.from("logos").list(userEmail);
     if (!logoList || logoList.length === 0) throw new Error("No logo found");
 
@@ -130,10 +86,9 @@ const lender = req.body.lender || null;
     const logoRes = await fetch(logoUrlData.publicUrl);
     const logoBytes = await logoRes.arrayBuffer();
 
-    // 📌 **Create Watermark Layer**
+    // 🔁 Create logo watermark page
     const watermarkDoc = await PDFDocument.create();
     const watermarkImage = await watermarkDoc.embedPng(logoBytes);
-
     const { width, height } = pdfDoc.getPages()[0].getSize();
     const watermarkPage = watermarkDoc.addPage([width, height]);
 
@@ -148,7 +103,7 @@ const lender = req.body.lender || null;
           width: logoWidth,
           height: logoHeight,
           opacity: 0.15,
-          rotate: degrees(45)
+          rotate: degrees(45),
         });
       }
     }
@@ -157,36 +112,48 @@ const lender = req.body.lender || null;
     const watermarkEmbed = await PDFDocument.load(watermarkPdfBytes);
     const [embeddedPage] = await pdfDoc.embedPages([watermarkEmbed.getPages()[0]]);
 
-    // 📌 **Overlay the watermark page on each page**
-    pdfDoc.getPages().forEach(page => {
+    pdfDoc.getPages().forEach((page) => {
       page.drawPage(embeddedPage, { x: 0, y: 0, width, height });
     });
 
+    // 🔐 QR Code: build payload + embed
+    const today = new Date().toISOString().split("T")[0];
+    const qrText = `Protected by Aquamark.io\nDocument Owner: ${userEmail}\nLender: ${lender}\nDate: ${today}`;
+    const qrDataUrl = await QRCode.toDataURL(qrText, { margin: 0, scale: 5 });
+    const qrImageBytes = Buffer.from(qrDataUrl.split(",")[1], "base64");
+    const qrImage = await pdfDoc.embedPng(qrImageBytes);
+
+    // ⬇️ Embed QR on all pages, bottom-right
+    const qrSize = 100;
+    pdfDoc.getPages().forEach((page) => {
+      const { width, height } = page.getSize();
+      page.drawImage(qrImage, {
+        x: width - qrSize - 20,
+        y: 20,
+        width: qrSize,
+        height: qrSize,
+        opacity: 0.4,
+      });
+    });
+
+    // 📈 Track usage
+    const newPagesUsed = usage.pages_used + numPages;
+    const newPagesRemaining = usage.page_credits - newPagesUsed;
+    await supabase
+      .from("usage")
+      .update({
+        pages_used: newPagesUsed,
+        pages_remaining: newPagesRemaining,
+      })
+      .eq("user_email", userEmail)
+      .select();
+
     const finalPdf = await pdfDoc.save();
-
-    // 📊 Update Usage Tracking
-const newPagesUsed = usage.pages_used + numPages;
-const newPagesRemaining = usage.page_credits - newPagesUsed;
-
-console.log(`Updating usage for ${userEmail}:`);
-console.log(`Pages Used: ${newPagesUsed}`);
-console.log(`Pages Remaining: ${newPagesRemaining}`);
-
-const { data, error } = await supabase.from("usage")
-  .update({ 
-    pages_used: newPagesUsed,
-    pages_remaining: newPagesRemaining
-  })
-  .eq("user_email", userEmail)
-  .select(); // Add .select() to force the update to return data
-
-if (error) {
-  console.error("❌ Error updating usage data:", error.message);
-} else {
-  console.log("✅ Usage data updated successfully:", data);
-}
     res.setHeader("Content-Type", "application/pdf");
-    res.setHeader("Content-Disposition", `attachment; filename="${file.name.replace('.pdf', '')}-protected.pdf"`);
+    res.setHeader(
+      "Content-Disposition",
+      `attachment; filename="${file.name.replace(".pdf", "")}-protected.pdf"`
+    );
     res.send(Buffer.from(finalPdf));
   } catch (err) {
     console.error("❌ Watermark error:", err);
