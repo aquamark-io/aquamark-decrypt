@@ -171,8 +171,8 @@ const lender = req.body.lender || null;
         watermarkPage.drawText(lender, {
           x: pos.x,
           y: pos.y,
-          size: 8, // small text size
-          opacity: 0.50, // very subtle opacity
+          size: 4, // small text size
+          opacity: 0.05, // very subtle opacity
           color: rgb(0.1, 0.1, 0.1)
           // No rotation - text will appear straight
         });
