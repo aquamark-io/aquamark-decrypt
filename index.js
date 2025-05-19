@@ -7,6 +7,7 @@ const path = require("path");
 const { PDFDocument, rgb, degrees } = require("pdf-lib");
 const fetch = require("node-fetch");
 const { createClient } = require("@supabase/supabase-js");
+const sharp = require("sharp");
 
 const app = express();
 const PORT = process.env.PORT || 10000;
@@ -164,26 +165,29 @@ pdfDoc.getPages().forEach(page => {
 
 // 📌 OPTIONAL: If lender provided, embed lender name via XObject
 if (lender) {
-  const lenderDoc = await PDFDocument.create();
-  const lenderPage = lenderDoc.addPage([width, height]);
-
-  lenderPage.drawText(lender, {
-    x: width / 2 - 100,
-    y: height / 2,
-    size: 30,
-    opacity: 0.15,
-    color: rgb(0.5, 0.5, 0.5),
-  });
-
-  const lenderPdfBytes = await lenderDoc.save();
-  const lenderXObjectDoc = await PDFDocument.load(lenderPdfBytes);
-  const [lenderPageEmbed] = await pdfDoc.embedPages([lenderXObjectDoc.getPages()[0]]);
+  const svg = `
+    <svg width="400" height="100" xmlns="http://www.w3.org/2000/svg">
+      <style>
+        text { fill: rgba(0,0,0,0.15); font-size: 30px; font-family: Arial, sans-serif; dominant-baseline: middle; text-anchor: middle; }
+      </style>
+      <text x="50%" y="50%">${lender}</text>
+    </svg>
+  `;
+  const pngBuffer = await sharp(Buffer.from(svg)).png().toBuffer();
+  const lenderImage = await pdfDoc.embedPng(pngBuffer);
+  const dims = lenderImage.scale(1);
+  const centerX = (width - dims.width) / 2;
+  const centerY = (height - dims.height) / 2;
 
   pdfDoc.getPages().forEach(page => {
-    page.drawPage(lenderPageEmbed, { x: 0, y: 0, width, height });
+    page.drawImage(lenderImage, {
+      x: centerX,
+      y: centerY,
+      width: dims.width,
+      height: dims.height,
+    });
   });
 }
-
 
     const finalPdf = await pdfDoc.save();
 
