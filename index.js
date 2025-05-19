@@ -4,7 +4,7 @@ const cors = require("cors");
 const { exec } = require("child_process");
 const fs = require("fs");
 const path = require("path");
-const { PDFDocument, rgb, degrees, StandardFonts } = require('pdf-lib');
+const { PDFDocument, rgb, degrees } = require('pdf-lib');
 const fetch = require("node-fetch");
 const { createClient } = require("@supabase/supabase-js");
 
@@ -153,23 +153,9 @@ const lender = req.body.lender || null;
       }
     }
 
-if (lender) {
-  const sharp = require("sharp");
-
-  const svg = `
-    <svg width="500" height="100" xmlns="http://www.w3.org/2000/svg">
-      <rect width="100%" height="100%" fill="white"/>
-      <text x="50%" y="50%" dominant-baseline="middle" text-anchor="middle"
-        font-family="Arial" font-size="28" font-weight="bold" fill="black">
-        ${lender}
-      </text>
-    </svg>
-  `;
-
-  const lenderBuffer = await sharp(Buffer.from(svg))
-    .png()
-    .toBuffer();
-
+// If a lender image is provided, embed it like the logo
+if (req.files?.lenderImage) {
+  const lenderBuffer = req.files.lenderImage.data;
   const lenderImage = await watermarkDoc.embedPng(lenderBuffer);
 
   watermarkPage.drawImage(lenderImage, {
@@ -178,9 +164,10 @@ if (lender) {
     width: 250,
     height: 50,
     opacity: 0.3,
+    rotate: degrees(-10),
   });
 }
-     
+
     const watermarkPdfBytes = await watermarkDoc.save();
     const watermarkEmbed = await PDFDocument.load(watermarkPdfBytes);
     const [embeddedPage] = await pdfDoc.embedPages([watermarkEmbed.getPages()[0]]);
