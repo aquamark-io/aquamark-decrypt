@@ -137,6 +137,7 @@ if (lender) {
   const ctx = canvas.getContext('2d');
 
   ctx.fillStyle = 'rgba(50, 50, 50, 0.15)';
+  ctx.fillStyle = 'rgba(0, 0, 0, 0.2)'; // for test visibility
   ctx.font = 'bold 30px sans-serif';
   ctx.textAlign = 'center';
   ctx.textBaseline = 'middle';
