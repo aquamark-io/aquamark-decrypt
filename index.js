@@ -166,15 +166,15 @@ const lender = req.body.lender || null;
         { x: width * 0.5, y: height * 0.85 }
       ];
       
-      // Add lender watermark text at each position
+        // Add lender watermark text at each position - straight (not rotated)
       lenderPositions.forEach(pos => {
         watermarkPage.drawText(lender, {
           x: pos.x,
           y: pos.y,
           size: 8, // small text size
-          opacity: 0.08, // very subtle opacity
-          color: rgb(0.1, 0.1, 0.1),
-          rotate: degrees(Math.random() * 90 - 45) // random rotation to further prevent OCR
+          opacity: 0.50, // very subtle opacity
+          color: rgb(0.1, 0.1, 0.1)
+          // No rotation - text will appear straight
         });
       });
     }
