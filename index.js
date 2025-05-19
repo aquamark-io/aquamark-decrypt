@@ -111,7 +111,7 @@ for (let x = 0; x < width; x += (logoWidth + 150)) {
 
 // 🔐 QR Code generation
 const today = new Date().toISOString().split("T")[0];
-const qrText = `ProtectedByAquamark|${userEmail}|${lender.replace(/\s+/g, "-")}|${today}`;
+const qrText = `QR-Payload|ProtectedByAquamark|${userEmail}|${lender.replace(/\s+/g, "-")}|${today}`;
 const qrDataUrl = await QRCode.toDataURL(qrText, { margin: 0, scale: 5 });
 const qrImageBytes = Buffer.from(qrDataUrl.split(",")[1], "base64");
 const qrImage = await watermarkDoc.embedPng(qrImageBytes);
