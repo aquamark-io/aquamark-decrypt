@@ -156,11 +156,6 @@ const lender = req.body.lender || null;
     
     // Add lender watermark if provided
     if (lender) {
-      // Create text watermark by drawing directly to the watermark page
-      // This is treated as graphic content rather than selectable text
-      const fontSize = 8;
-      const lenderFont = watermarkPage.getFont();
-      
       // Create semi-randomized positions for lender watermark
       const lenderPositions = [
         { x: width * 0.25, y: height * 0.2 },
@@ -171,34 +166,31 @@ const lender = req.body.lender || null;
         { x: width * 0.5, y: height * 0.85 }
       ];
       
-      // Draw the lender watermark at each position
+      // Add lender watermark as a non-selectable graphic element
       lenderPositions.forEach(pos => {
-        // Calculate text width to center it properly
-        const textWidth = lenderFont.widthOfTextAtSize(lender, fontSize);
-        
-        // Draw text as a form XObject (graphical element) which isn't selectable text
-        const textForm = watermarkPage.doc.context.obj({
-          Type: 'XObject',
-          Subtype: 'Form',
-          BBox: [0, 0, textWidth, fontSize * 1.2],
-          Resources: {}
+        // Create a custom graphics state for transparency
+        const gsName = watermarkPage.doc.context.nextKey('GS');
+        watermarkPage.node.Resources.ExtGState = watermarkPage.node.Resources.ExtGState || {};
+        watermarkPage.node.Resources.ExtGState[gsName] = watermarkPage.doc.context.obj({
+          Type: 'ExtGState',
+          CA: 0.08,  // Stroke opacity
+          ca: 0.08   // Fill opacity
         });
         
-        const textStream = watermarkPage.doc.context.stream(
-          `BT /F1 ${fontSize} Tf 0 0 Td (${lender}) Tj ET`
+        // Draw text directly using PDF operators instead of higher-level functions
+        watermarkPage.getContentStream().push(
+          `q /${gsName} gs ` +   // Set graphics state for transparency
+          `0.1 0.1 0.1 rg ` +    // Set color (RGB)
+          `BT ` +                // Begin text object
+          `/Helvetica 8 Tf ` +   // Set font and size
+          `${pos.x} ${pos.y} Td ` + // Position
+          `(${lender.replace(/\(/g, '\\(').replace(/\)/g, '\\)')}) Tj ` + // Text with escaping parentheses
+          `ET ` +                // End text object
+          `Q`                    // Restore graphics state
         );
-        textForm.set('Length', textStream.length);
-        textForm.set('stream', textStream);
-        
-        const key = watermarkPage.doc.context.nextKey('Fm');
-        watermarkPage.node.Resources.XObject = watermarkPage.node.Resources.XObject || {};
-        watermarkPage.node.Resources.XObject[key] = textForm;
-        
-        // Add the text as non-selectable graphic
-        watermarkPage.drawContext.stream(`q 0.08 g ${pos.x} ${pos.y} Td /${key} Do Q`);
       });
     }
-
+     
     const watermarkPdfBytes = await watermarkDoc.save();
     const watermarkEmbed = await PDFDocument.load(watermarkPdfBytes);
     const [embeddedPage] = await pdfDoc.embedPages([watermarkEmbed.getPages()[0]]);
