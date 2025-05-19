@@ -194,8 +194,23 @@ if (lenderImage) {
 
     // 📌 **Overlay the watermark page on each page**
     pdfDoc.getPages().forEach(page => {
-      page.drawPage(embeddedPage, { x: 0, y: 0, width, height });
+  page.drawPage(embeddedPage, { x: 0, y: 0, width, height });
+
+  // Optional: Reapply lenderImage directly on each page
+  if (lenderImage) {
+    const textDims = lenderImage.scale(1);
+    const centerX = (width - textDims.width) / 2;
+    const centerY = (height - textDims.height) / 2;
+
+    page.drawImage(lenderImage, {
+      x: centerX,
+      y: centerY,
+      width: textDims.width,
+      height: textDims.height,
+      opacity: 0.15
     });
+  }
+});
 
     const finalPdf = await pdfDoc.save();
 
