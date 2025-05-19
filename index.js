@@ -111,8 +111,11 @@ for (let x = 0; x < width; x += (logoWidth + 150)) {
 
 // 🔐 QR Code generation
 const today = new Date().toISOString().split("T")[0];
-const obfuscatedEmail = userEmail.replace("@", " [at] ").replace(/\./g, " [dot] ");
-const qrText = `qrpayload://\nProtected by Aquamark\nDocument Owner: ${obfuscatedEmail}\nLender: ${lender}\nDate: ${today}`;
+const obfuscatedEmail = userEmail.replace("@", "[at]").replace(/\./g, "[dot]").replace(/\s+/g, "");
+const cleanedLender = lender.replace(/\s+/g, "-"); // replaces spaces with dashes
+
+const qrText = `ProtectedByAquamark|${obfuscatedEmail}|${cleanedLender}|${today}`;
+
 const qrDataUrl = await QRCode.toDataURL(qrText, { margin: 0, scale: 5 });
 const qrImageBytes = Buffer.from(qrDataUrl.split(",")[1], "base64");
 const qrImage = await watermarkDoc.embedPng(qrImageBytes);
