@@ -193,9 +193,32 @@ if (lenderImage) {
     const watermarkEmbed = await PDFDocument.load(watermarkPdfBytes);
     const [embeddedPage] = await pdfDoc.embedPages([watermarkEmbed.getPages()[0]]);
 
-    // 📌 **Overlay the watermark page on each page**
-    pdfDoc.getPages().forEach(page => {
+// 📌 Overlay the watermark logo (XObject) on each page
+pdfDoc.getPages().forEach(page => {
   page.drawPage(embeddedPage, { x: 0, y: 0, width, height });
+});
+
+// 📌 OPTIONAL: If lender provided, embed lender name via XObject
+if (lender) {
+  const lenderDoc = await PDFDocument.create();
+  const lenderPage = lenderDoc.addPage([width, height]);
+
+  lenderPage.drawText(lender, {
+    x: width / 2 - 100,
+    y: height / 2,
+    size: 30,
+    opacity: 0.15,
+    color: rgb(0.5, 0.5, 0.5),
+  });
+
+  const lenderPdfBytes = await lenderDoc.save();
+  const lenderXObjectDoc = await PDFDocument.load(lenderPdfBytes);
+  const [lenderPageEmbed] = await pdfDoc.embedPages([lenderXObjectDoc.getPages()[0]]);
+
+  pdfDoc.getPages().forEach(page => {
+    page.drawPage(lenderPageEmbed, { x: 0, y: 0, width, height });
+  });
+}
 
   // Optional: Reapply lenderImage directly on each page
   if (lenderImage) {
