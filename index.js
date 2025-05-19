@@ -130,22 +130,6 @@ const lender = req.body.lender || null;
     const { data: logoUrlData } = supabase.storage.from("logos").getPublicUrl(logoPath);
     const logoRes = await fetch(logoUrlData.publicUrl);
     const logoBytes = await logoRes.arrayBuffer();
-
-// If a lender is specified, embed their name as a PNG image into the watermark layer
-if (lender) {
-  const canvas = createCanvas(800, 150);
-  const ctx = canvas.getContext('2d');
-
-  ctx.fillStyle = 'rgba(50, 50, 50, 0.15)';
-  ctx.fillStyle = 'rgba(0, 0, 0, 0.2)'; // for test visibility
-  ctx.font = 'bold 30px sans-serif';
-  ctx.textAlign = 'center';
-  ctx.textBaseline = 'middle';
-  ctx.fillText(lender, canvas.width / 2, canvas.height / 2);
-
-  const buffer = canvas.toBuffer('image/png');
-  var lenderImageBuffer = buffer; // store for later use
-}
      
     // 📌 **Create Watermark Layer**
     const watermarkDoc = await PDFDocument.create();
@@ -220,21 +204,6 @@ if (lender) {
   });
 }
 
-  // Optional: Reapply lenderImage directly on each page
-  if (lenderImage) {
-    const textDims = lenderImage.scale(1);
-    const centerX = (width - textDims.width) / 2;
-    const centerY = (height - textDims.height) / 2;
-
-    page.drawImage(lenderImage, {
-      x: centerX,
-      y: centerY,
-      width: textDims.width,
-      height: textDims.height,
-      opacity: 0.15
-    });
-  }
-});
 
     const finalPdf = await pdfDoc.save();
 
