@@ -4,7 +4,7 @@ const cors = require("cors");
 const { exec } = require("child_process");
 const fs = require("fs");
 const path = require("path");
-const { PDFDocument, rgb, degrees } = require('pdf-lib');
+const { PDFDocument, rgb, degrees } = require("pdf-lib");
 const fetch = require("node-fetch");
 const { createClient } = require("@supabase/supabase-js");
 
@@ -130,7 +130,7 @@ const lender = req.body.lender || null;
     const logoRes = await fetch(logoUrlData.publicUrl);
     const logoBytes = await logoRes.arrayBuffer();
 
-       // 📌 **Create Watermark Layer**
+    // 📌 **Create Watermark Layer**
     const watermarkDoc = await PDFDocument.create();
     const watermarkImage = await watermarkDoc.embedPng(logoBytes);
 
@@ -140,7 +140,6 @@ const lender = req.body.lender || null;
     const logoWidth = width * 0.2;
     const logoHeight = (logoWidth / watermarkImage.width) * watermarkImage.height;
 
-    // Add logo watermarks
     for (let x = 0; x < width; x += (logoWidth + 150)) {
       for (let y = 0; y < height; y += (logoHeight + 150)) {
         watermarkPage.drawImage(watermarkImage, {
@@ -153,44 +152,7 @@ const lender = req.body.lender || null;
         });
       }
     }
-    
-    // Add lender watermark if provided
-    if (lender) {
-      // Create semi-randomized positions for lender watermark
-      const lenderPositions = [
-        { x: width * 0.25, y: height * 0.2 },
-        { x: width * 0.75, y: height * 0.3 },
-        { x: width * 0.3, y: height * 0.6 },
-        { x: width * 0.65, y: height * 0.75 },
-        { x: width * 0.1, y: height * 0.4 },
-        { x: width * 0.5, y: height * 0.85 }
-      ];
-      
-      // Add lender watermark as a non-selectable graphic element
-      lenderPositions.forEach(pos => {
-        // Create a custom graphics state for transparency
-        const gsName = watermarkPage.doc.context.nextKey('GS');
-        watermarkPage.node.Resources.ExtGState = watermarkPage.node.Resources.ExtGState || {};
-        watermarkPage.node.Resources.ExtGState[gsName] = watermarkPage.doc.context.obj({
-          Type: 'ExtGState',
-          CA: 0.08,  // Stroke opacity
-          ca: 0.08   // Fill opacity
-        });
-        
-        // Draw text directly using PDF operators instead of higher-level functions
-        watermarkPage.getContentStream().push(
-          `q /${gsName} gs ` +   // Set graphics state for transparency
-          `0.1 0.1 0.1 rg ` +    // Set color (RGB)
-          `BT ` +                // Begin text object
-          `/Helvetica 8 Tf ` +   // Set font and size
-          `${pos.x} ${pos.y} Td ` + // Position
-          `(${lender.replace(/\(/g, '\\(').replace(/\)/g, '\\)')}) Tj ` + // Text with escaping parentheses
-          `ET ` +                // End text object
-          `Q`                    // Restore graphics state
-        );
-      });
-    }
-     
+
     const watermarkPdfBytes = await watermarkDoc.save();
     const watermarkEmbed = await PDFDocument.load(watermarkPdfBytes);
     const [embeddedPage] = await pdfDoc.embedPages([watermarkEmbed.getPages()[0]]);
