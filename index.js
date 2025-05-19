@@ -172,7 +172,7 @@ const lender = req.body.lender || null;
           x: pos.x,
           y: pos.y,
           size: 4, // small text size
-          opacity: 0.80,
+          opacity: 0.05,
           color: rgb(0.1, 0.1, 0.1)
           // No rotation - text will appear straight
         });
