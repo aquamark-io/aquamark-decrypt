@@ -130,7 +130,7 @@ const lender = req.body.lender || null;
     const logoRes = await fetch(logoUrlData.publicUrl);
     const logoBytes = await logoRes.arrayBuffer();
 
-   // 📌 **Create Watermark Layer**
+       // 📌 **Create Watermark Layer**
     const watermarkDoc = await PDFDocument.create();
     const watermarkImage = await watermarkDoc.embedPng(logoBytes);
 
@@ -156,7 +156,12 @@ const lender = req.body.lender || null;
     
     // Add lender watermark if provided
     if (lender) {
-      // Create semi-randomized positions for lender text (6 instances scattered)
+      // Create text watermark by drawing directly to the watermark page
+      // This is treated as graphic content rather than selectable text
+      const fontSize = 8;
+      const lenderFont = watermarkPage.getFont();
+      
+      // Create semi-randomized positions for lender watermark
       const lenderPositions = [
         { x: width * 0.25, y: height * 0.2 },
         { x: width * 0.75, y: height * 0.3 },
@@ -166,16 +171,31 @@ const lender = req.body.lender || null;
         { x: width * 0.5, y: height * 0.85 }
       ];
       
-        // Add lender watermark text at each position - straight (not rotated)
+      // Draw the lender watermark at each position
       lenderPositions.forEach(pos => {
-        watermarkPage.drawText(lender, {
-          x: pos.x,
-          y: pos.y,
-          size: 4, // small text size
-          opacity: 0.05,
-          color: rgb(0.1, 0.1, 0.1)
-          // No rotation - text will appear straight
+        // Calculate text width to center it properly
+        const textWidth = lenderFont.widthOfTextAtSize(lender, fontSize);
+        
+        // Draw text as a form XObject (graphical element) which isn't selectable text
+        const textForm = watermarkPage.doc.context.obj({
+          Type: 'XObject',
+          Subtype: 'Form',
+          BBox: [0, 0, textWidth, fontSize * 1.2],
+          Resources: {}
         });
+        
+        const textStream = watermarkPage.doc.context.stream(
+          `BT /F1 ${fontSize} Tf 0 0 Td (${lender}) Tj ET`
+        );
+        textForm.set('Length', textStream.length);
+        textForm.set('stream', textStream);
+        
+        const key = watermarkPage.doc.context.nextKey('Fm');
+        watermarkPage.node.Resources.XObject = watermarkPage.node.Resources.XObject || {};
+        watermarkPage.node.Resources.XObject[key] = textForm;
+        
+        // Add the text as non-selectable graphic
+        watermarkPage.drawContext.stream(`q 0.08 g ${pos.x} ${pos.y} Td /${key} Do Q`);
       });
     }
 
