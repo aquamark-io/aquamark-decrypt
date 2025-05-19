@@ -86,59 +86,50 @@ app.post("/watermark", async (req, res) => {
     const logoRes = await fetch(logoUrlData.publicUrl);
     const logoBytes = await logoRes.arrayBuffer();
 
-    // 🔁 Create logo watermark page
-    const watermarkDoc = await PDFDocument.create();
-    const watermarkImage = await watermarkDoc.embedPng(logoBytes);
-    const { width, height } = pdfDoc.getPages()[0].getSize();
-    const watermarkPage = watermarkDoc.addPage([width, height]);
+// 🔁 Create combined watermark page (logo + QR)
+const watermarkDoc = await PDFDocument.create();
+const watermarkImage = await watermarkDoc.embedPng(logoBytes);
+const { width, height } = pdfDoc.getPages()[0].getSize();
+const watermarkPage = watermarkDoc.addPage([width, height]);
 
-    const logoWidth = width * 0.2;
-    const logoHeight = (logoWidth / watermarkImage.width) * watermarkImage.height;
+// 🔢 Logo tiling
+const logoWidth = width * 0.2;
+const logoHeight = (logoWidth / watermarkImage.width) * watermarkImage.height;
 
-    for (let x = 0; x < width; x += (logoWidth + 150)) {
-      for (let y = 0; y < height; y += (logoHeight + 150)) {
-        watermarkPage.drawImage(watermarkImage, {
-          x,
-          y,
-          width: logoWidth,
-          height: logoHeight,
-          opacity: 0.15,
-          rotate: degrees(45),
-        });
-      }
-    }
-
-    const watermarkPdfBytes = await watermarkDoc.save();
-    const watermarkEmbed = await PDFDocument.load(watermarkPdfBytes);
-    const [embeddedPage] = await pdfDoc.embedPages([watermarkEmbed.getPages()[0]]);
-
-    pdfDoc.getPages().forEach((page) => {
-      page.drawPage(embeddedPage, { x: 0, y: 0, width, height });
+for (let x = 0; x < width; x += (logoWidth + 150)) {
+  for (let y = 0; y < height; y += (logoHeight + 150)) {
+    watermarkPage.drawImage(watermarkImage, {
+      x,
+      y,
+      width: logoWidth,
+      height: logoHeight,
+      opacity: 0.15,
+      rotate: degrees(45),
     });
+  }
+}
 
-    // 🔐 QR Code: build payload + embed
-    const today = new Date().toISOString().split("T")[0];
-    const qrText = `Protected by Aquamark.io\nDocument Owner: ${userEmail}\nLender: ${lender}\nDate: ${today}`;
-    const qrDataUrl = await QRCode.toDataURL(qrText, { margin: 0, scale: 5 });
-    const qrImageBytes = Buffer.from(qrDataUrl.split(",")[1], "base64");
-    const qrImage = await pdfDoc.embedPng(qrImageBytes);
+// 🔐 QR Code generation
+const today = new Date().toISOString().split("T")[0];
+const qrText = `Protected by Aquamark.io\nDocument Owner: ${userEmail}\nLender: ${lender}\nDate: ${today}`;
+const qrDataUrl = await QRCode.toDataURL(qrText, { margin: 0, scale: 5 });
+const qrImageBytes = Buffer.from(qrDataUrl.split(",")[1], "base64");
+const qrImage = await watermarkDoc.embedPng(qrImageBytes);
 
-    // ⬇️ Embed QR on all pages, bottom-right
-const qrSize = 70; // Was 100, now smaller
-const pages = pdfDoc.getPages();
-
-pages.forEach((page) => {
-  const { width, height } = page.getSize();
-  page.drawImage(qrImage, {
-    x: width - qrSize - 15,
-    y: 15,
-    width: qrSize,
-    height: qrSize,
-    opacity: 0.4,
-    // Embed directly into content stream (default behavior)
-    // Just ensure no annotations or layering logic is used
-  });
+// 🧷 Add QR to same watermark page (bottom-right)
+const qrSize = 70;
+watermarkPage.drawImage(qrImage, {
+  x: width - qrSize - 15,
+  y: 15,
+  width: qrSize,
+  height: qrSize,
+  opacity: 0.4,
 });
+
+// ✅ Save unified watermark page
+const watermarkPdfBytes = await watermarkDoc.save();
+const watermarkEmbed = await PDFDocument.load(watermarkPdfBytes);
+const [embeddedPage] = await pdfDoc.embedPages([watermarkEmbed.getPages()[0]]);
 
     // 📈 Track usage
     const newPagesUsed = usage.pages_used + numPages;
