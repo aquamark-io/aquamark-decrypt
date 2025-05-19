@@ -7,7 +7,6 @@ const path = require("path");
 const { PDFDocument, rgb, degrees } = require("pdf-lib");
 const fetch = require("node-fetch");
 const { createClient } = require("@supabase/supabase-js");
-const { createCanvas } = require("canvas");
 
 const app = express();
 const PORT = process.env.PORT || 10000;
