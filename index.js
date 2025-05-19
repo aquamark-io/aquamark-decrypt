@@ -130,7 +130,7 @@ const lender = req.body.lender || null;
     const logoRes = await fetch(logoUrlData.publicUrl);
     const logoBytes = await logoRes.arrayBuffer();
 
-    // 📌 **Create Watermark Layer**
+   // 📌 **Create Watermark Layer**
     const watermarkDoc = await PDFDocument.create();
     const watermarkImage = await watermarkDoc.embedPng(logoBytes);
 
@@ -140,6 +140,7 @@ const lender = req.body.lender || null;
     const logoWidth = width * 0.2;
     const logoHeight = (logoWidth / watermarkImage.width) * watermarkImage.height;
 
+    // Add logo watermarks
     for (let x = 0; x < width; x += (logoWidth + 150)) {
       for (let y = 0; y < height; y += (logoHeight + 150)) {
         watermarkPage.drawImage(watermarkImage, {
@@ -152,21 +153,31 @@ const lender = req.body.lender || null;
         });
       }
     }
-
-// If a lender image is provided, embed it like the logo
-if (req.files?.lenderImage) {
-  const lenderBuffer = req.files.lenderImage.data;
-  const lenderImage = await watermarkDoc.embedPng(lenderBuffer);
-
-  watermarkPage.drawImage(lenderImage, {
-    x: (width - 250),
-    y: (height / 2) - 25,
-    width: 250,
-    height: 50,
-    opacity: 0.3,
-    rotate: degrees(-10),
-  });
-}
+    
+    // Add lender watermark if provided
+    if (lender) {
+      // Create semi-randomized positions for lender text (6 instances scattered)
+      const lenderPositions = [
+        { x: width * 0.25, y: height * 0.2 },
+        { x: width * 0.75, y: height * 0.3 },
+        { x: width * 0.3, y: height * 0.6 },
+        { x: width * 0.65, y: height * 0.75 },
+        { x: width * 0.1, y: height * 0.4 },
+        { x: width * 0.5, y: height * 0.85 }
+      ];
+      
+      // Add lender watermark text at each position
+      lenderPositions.forEach(pos => {
+        watermarkPage.drawText(lender, {
+          x: pos.x,
+          y: pos.y,
+          size: 8, // small text size
+          opacity: 0.08, // very subtle opacity
+          color: rgb(0.1, 0.1, 0.1),
+          rotate: degrees(Math.random() * 90 - 45) // random rotation to further prevent OCR
+        });
+      });
+    }
 
     const watermarkPdfBytes = await watermarkDoc.save();
     const watermarkEmbed = await PDFDocument.load(watermarkPdfBytes);
