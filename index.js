@@ -7,6 +7,7 @@ const path = require("path");
 const { PDFDocument, rgb, degrees } = require("pdf-lib");
 const fetch = require("node-fetch");
 const { createClient } = require("@supabase/supabase-js");
+const { createCanvas } = require("canvas");
 
 const app = express();
 const PORT = process.env.PORT || 10000;
@@ -130,9 +131,29 @@ const lender = req.body.lender || null;
     const logoRes = await fetch(logoUrlData.publicUrl);
     const logoBytes = await logoRes.arrayBuffer();
 
+// If a lender is specified, embed their name as a PNG image into the watermark layer
+if (lender) {
+  const canvas = createCanvas(800, 150);
+  const ctx = canvas.getContext('2d');
+
+  ctx.fillStyle = 'rgba(50, 50, 50, 0.15)';
+  ctx.font = '10px Helvetica';
+  ctx.textAlign = 'center';
+  ctx.textBaseline = 'middle';
+  ctx.fillText(lender, canvas.width / 2, canvas.height / 2);
+
+  const buffer = canvas.toBuffer('image/png');
+  var lenderImageBuffer = buffer; // store for later use
+}
+     
     // 📌 **Create Watermark Layer**
     const watermarkDoc = await PDFDocument.create();
     const watermarkImage = await watermarkDoc.embedPng(logoBytes);
+
+   let lenderImage;
+if (lenderImageBuffer) {
+  lenderImage = await watermarkDoc.embedPng(lenderImageBuffer);
+}
 
     const { width, height } = pdfDoc.getPages()[0].getSize();
     const watermarkPage = watermarkDoc.addPage([width, height]);
@@ -153,6 +174,16 @@ const lender = req.body.lender || null;
       }
     }
 
+if (lenderImage) {
+  watermarkPage.drawImage(lenderImage, {
+    x: centerX,
+    y: y,
+    width: textDims.width,
+    height: textDims.height,
+    opacity: 0.15,
+  });
+}
+     
     const watermarkPdfBytes = await watermarkDoc.save();
     const watermarkEmbed = await PDFDocument.load(watermarkPdfBytes);
     const [embeddedPage] = await pdfDoc.embedPages([watermarkEmbed.getPages()[0]]);
