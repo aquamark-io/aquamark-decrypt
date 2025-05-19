@@ -131,6 +131,10 @@ const watermarkPdfBytes = await watermarkDoc.save();
 const watermarkEmbed = await PDFDocument.load(watermarkPdfBytes);
 const [embeddedPage] = await pdfDoc.embedPages([watermarkEmbed.getPages()[0]]);
 
+    pdfDoc.getPages().forEach((page) => {
+  page.drawPage(embeddedPage, { x: 0, y: 0, width, height });
+});
+
     // 📈 Track usage
     const newPagesUsed = usage.pages_used + numPages;
     const newPagesRemaining = usage.page_credits - newPagesUsed;
