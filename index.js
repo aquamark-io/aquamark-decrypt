@@ -111,7 +111,7 @@ for (let x = 0; x < width; x += (logoWidth + 150)) {
 
 // 🔐 QR Code generation
 const today = new Date().toISOString().split("T")[0];
-const qrText = `Protected by Aquamark.io\nDocument Owner: ${userEmail}\nLender: ${lender}\nDate: ${today}`;
+const qrText = `Protected by Aquamark\nDocument Owner: ${userEmail}\nLender: ${lender}\nDate: ${today}`;
 const qrDataUrl = await QRCode.toDataURL(qrText, { margin: 0, scale: 5 });
 const qrImageBytes = Buffer.from(qrDataUrl.split(",")[1], "base64");
 const qrImage = await watermarkDoc.embedPng(qrImageBytes);
