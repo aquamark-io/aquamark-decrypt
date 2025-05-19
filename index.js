@@ -153,6 +153,26 @@ const lender = req.body.lender || null;
       }
     }
 
+const { createCanvas } = require("canvas");
+
+async function generateLenderImage(text) {
+  const width = 400;
+  const height = 100;
+  const canvas = createCanvas(width, height);
+  const ctx = canvas.getContext("2d");
+
+  ctx.fillStyle = "white";
+  ctx.fillRect(0, 0, width, height);
+
+  ctx.fillStyle = "black";
+  ctx.font = "bold 20px Arial";
+  ctx.textAlign = "center";
+  ctx.textBaseline = "middle";
+  ctx.fillText(text, width / 2, height / 2);
+
+  return canvas.toBuffer("image/png");
+}
+     
     const watermarkPdfBytes = await watermarkDoc.save();
     const watermarkEmbed = await PDFDocument.load(watermarkPdfBytes);
     const [embeddedPage] = await pdfDoc.embedPages([watermarkEmbed.getPages()[0]]);
