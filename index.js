@@ -7,6 +7,8 @@ const path = require("path");
 const { PDFDocument, rgb, degrees } = require("pdf-lib");
 const fetch = require("node-fetch");
 const { createClient } = require("@supabase/supabase-js");
+const sharp = require("sharp");
+const { createCanvas } = require("canvas");
 
 const app = express();
 const PORT = process.env.PORT || 10000;
@@ -161,6 +163,41 @@ const lender = req.body.lender || null;
 pdfDoc.getPages().forEach(page => {
   page.drawPage(embeddedPage, { x: 0, y: 0, width, height });
 });
+
+// 🛡️ Overlay circular lender badge if lender is present
+if (lender) {
+  // Step 1: Create PNG of lender name centered
+  const canvas = createCanvas(500, 500);
+  const ctx = canvas.getContext("2d");
+  ctx.fillStyle = "rgba(0, 0, 0, 0.15)";
+  ctx.font = "bold 32px sans-serif";
+  ctx.textAlign = "center";
+  ctx.textBaseline = "middle";
+  ctx.fillText(lender, 250, 250);
+
+  const nameBuffer = canvas.toBuffer("image/png");
+
+  // Step 2: Composite with badge
+  const finalBadge = await sharp(path.join(__dirname, "warning.png"))
+    .composite([{ input: nameBuffer, top: 0, left: 0 }])
+    .png()
+    .toBuffer();
+
+  // Step 3: Embed badge into PDF
+  const badgeImage = await pdfDoc.embedPng(finalBadge);
+  const dims = badgeImage.scale(0.5);
+  const centerX = (width - dims.width) / 2;
+  const centerY = (height - dims.height) / 2;
+
+  pdfDoc.getPages().forEach(page => {
+    page.drawImage(badgeImage, {
+      x: centerX,
+      y: centerY,
+      width: dims.width,
+      height: dims.height,
+    });
+  });
+}     
 
 // 📌 OPTIONAL: If lender provided, embed lender name via XObject
 if (lender) {
