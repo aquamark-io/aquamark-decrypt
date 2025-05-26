@@ -7,7 +7,7 @@ const path = require("path");
 const { PDFDocument, rgb, degrees } = require("pdf-lib");
 const fetch = require("node-fetch");
 const { createClient } = require("@supabase/supabase-js");
-const QRCode = require("qrcode"); // ✅ Added for QR code generation
+const QRCode = require("qrcode");
 
 const app = express();
 const PORT = process.env.PORT || 10000;
@@ -37,12 +37,13 @@ app.post("/batch-watermark", async (req, res) => {
       return res.status(400).send("Invalid or empty payload");
     }
 
-    const usageMap = {}; // { user_email: totalPagesUsed }
+    const usageMap = {}; // Track total pages used per user_email
 
     const results = await Promise.all(
       files.map(async ({ user_email, file, lender }, i) => {
         try {
           let pdfBytes = Buffer.from(file, "base64");
+
           try {
             await PDFDocument.load(pdfBytes, { ignoreEncryption: false });
           } catch {
@@ -72,7 +73,6 @@ app.post("/batch-watermark", async (req, res) => {
             throw new Error("Insufficient credits");
           }
 
-          // Track total pages used per user
           if (!usageMap[user_email]) usageMap[user_email] = 0;
           usageMap[user_email] += numPages;
 
@@ -92,11 +92,15 @@ app.post("/batch-watermark", async (req, res) => {
 
           const logoWidth = width * 0.2;
           const logoHeight = (logoWidth / logo.width) * logo.height;
+
           for (let x = 0; x < width; x += (logoWidth + 150)) {
             for (let y = 0; y < height; y += (logoHeight + 150)) {
               watermarkPage.drawImage(logo, {
-                x, y, width: logoWidth, height: logoHeight,
-                opacity: 0.15, rotate: degrees(45),
+                x, y,
+                width: logoWidth,
+                height: logoHeight,
+                opacity: 0.15,
+                rotate: degrees(45),
               });
             }
           }
@@ -107,12 +111,14 @@ app.post("/batch-watermark", async (req, res) => {
           );
           const qrText = `https://aquamark.io/q.html?data=${qrPayload}`;
           const qrUrl = await QRCode.toDataURL(qrText, { margin: 0, scale: 5 });
-          const qrImg = await watermarkDoc.embedPng(
-            Buffer.from(qrUrl.split(",")[1], "base64")
-          );
+          const qrImg = await watermarkDoc.embedPng(Buffer.from(qrUrl.split(",")[1], "base64"));
 
           watermarkPage.drawImage(qrImg, {
-            x: width - 35, y: 15, width: 20, height: 20, opacity: 0.4,
+            x: width - 35,
+            y: 15,
+            width: 20,
+            height: 20,
+            opacity: 0.4,
           });
 
           const watermarkBytes = await watermarkDoc.save();
@@ -135,14 +141,19 @@ app.post("/batch-watermark", async (req, res) => {
       })
     );
 
-    // ✅ Perform usage updates once per user
+    // ✅ Update usage once per user_email
     await Promise.all(
       Object.entries(usageMap).map(async ([user_email, totalPages]) => {
-        const { data: current } = await supabase
+        const { data: current, error: fetchError } = await supabase
           .from("usage")
           .select("*")
           .eq("user_email", user_email)
           .single();
+
+        if (fetchError || !current) {
+          console.error(`❌ Usage record missing for ${user_email}`);
+          return;
+        }
 
         const updatedUsed = current.pages_used + totalPages;
         const updatedRemaining = current.page_credits - updatedUsed;
@@ -157,9 +168,13 @@ app.post("/batch-watermark", async (req, res) => {
       })
     );
 
-    res.json(results.filter(f => f && !f.error));
+    res.json(results.filter((f) => f && !f.error));
   } catch (err) {
     console.error("❌ Batch route error:", err);
     res.status(500).send("Batch processing failed: " + err.message);
   }
+});
+
+app.listen(PORT, () => {
+  console.log(`🚀 Server running on port ${PORT}`);
 });
