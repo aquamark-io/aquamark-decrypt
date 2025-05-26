@@ -36,7 +36,7 @@ app.post("/watermark", async (req, res) => {
 
   const userEmail = req.body.user_email;
   const lender = req.body.lender || "N/A";
-  const file = req.files.file;
+const file = Array.isArray(req.files.file) ? req.files.file[0] : req.files.file;
 
   try {
     // 🗄️ Decrypt if needed
