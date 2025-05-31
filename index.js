@@ -36,6 +36,9 @@ app.post("/watermark", async (req, res) => {
 
   const userEmail = req.body.user_email;
   const lender = req.body.lender || "N/A";
+  const salesperson = req.body.salesperson || "N/A";
+  const processor = req.body.processor || "N/A";
+
 const file = Array.isArray(req.files.file) ? req.files.file[0] : req.files.file;
 
   try {
@@ -111,7 +114,7 @@ for (let x = 0; x < width; x += (logoWidth + 150)) {
 
 // 🔐 QR Code generation
 const today = new Date().toISOString().split("T")[0];
-const payload = encodeURIComponent(`ProtectedByAquamark|${userEmail}|${lender}|${today}`);
+const payload = encodeURIComponent(`ProtectedByAquamark|${userEmail}|${lender}|${salesperson}|${processor}|${today}`);
 const qrText = `https://aquamark.io/q.html?data=${payload}`;
 const qrDataUrl = await QRCode.toDataURL(qrText, { margin: 0, scale: 5 });
 const qrImageBytes = Buffer.from(qrDataUrl.split(",")[1], "base64");
