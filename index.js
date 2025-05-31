@@ -156,22 +156,22 @@ const [embeddedPage] = await pdfDoc.embedPages([watermarkEmbed.getPages()[0]]);
     // 📜 Optional: Add state disclaimer if applicable
 const stateInput = (req.body.state || "").toLowerCase().replace(/\s/g, "");
 const stateMap = {
-  ca: "Disclaimer: CFL license required.",
-  california: "Disclaimer: CFL license required.",
+  ca: "Disclaimer: Disclosure and CFL license required.",
+  california: "Disclaimer: Disclosure and CFL license required.",
   ct: "Disclaimer: Registration and compensation disclosure required for deals under $250K.",
   connecticut: "Disclaimer: Registration and compensation disclosure required for deals under $250K.",
-  fl: "Disclaimer: Compensation must be disclosed.",
-  florida: "Disclaimer: Compensation must be disclosed.",
-  ga: "Disclaimer: Must disclose compensation and follow transparency requirements.",
-  georgia: "Disclaimer: Must disclose compensation and follow transparency requirements.",
-  mo: "Disclaimer: Registration required; no disclosure obligations.",
-  missouri: "Disclaimer: Registration required; no disclosure obligations.",
-  ny: "Disclaimer: Compensation disclosure required.",
-  newyork: "Disclaimer: Compensation disclosure required.",
-  ut: "Disclaimer: Registration and compensation disclosure required.",
-  utah: "Disclaimer: Registration and compensation disclosure required.",
-  va: "Disclaimer: Must register and disclose compensation in sales-based financing.",
-  virginia: "Disclaimer: Must register and disclose compensation in sales-based financing.",
+  fl: "Disclaimer: Advertising must include address and phone number. Compensation must be disclosed.",
+  florida: "Disclaimer: Advertising must include address and phone number. Compensation must be disclosed.",
+  ga: "Disclaimer: Disclosure required.",
+  georgia: "Disclaimer: Disclosure required.",
+  mo: "Disclaimer: Registration and disclosure required.",
+  missouri: "Disclaimer: Registration and disclosure required.",
+  ny: "Disclaimer: Disclosure required.",
+  newyork: "Disclaimer: Disclosure required.",
+  ut: "Disclaimer: License, registration and disclosure required.",
+  utah: "Disclaimer: License, registration and disclosure required.",
+  va: "Disclaimer: Registration and disclosure required.",
+  virginia: "Disclaimer: Registration and disclosure required.",
 };
 
 const disclaimer = stateMap[stateInput];
