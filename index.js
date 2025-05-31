@@ -152,6 +152,33 @@ const [embeddedPage] = await pdfDoc.embedPages([watermarkEmbed.getPages()[0]]);
       .select();
 
     const finalPdf = await pdfDoc.save();
+
+    // 📜 Optional: Add state disclaimer if applicable
+const stateInput = (req.body.state || "").toLowerCase().replace(/\s/g, "");
+const stateMap = {
+  ca: "Disclaimer: CFL license required.",
+  california: "Disclaimer: CFL license required.",
+  ct: "Disclaimer: Registration and compensation disclosure required for deals under $250K.",
+  connecticut: "Disclaimer: Registration and compensation disclosure required for deals under $250K.",
+  fl: "Disclaimer: Compensation must be disclosed.",
+  florida: "Disclaimer: Compensation must be disclosed.",
+  ga: "Disclaimer: Must disclose compensation and follow transparency requirements.",
+  georgia: "Disclaimer: Must disclose compensation and follow transparency requirements.",
+  mo: "Disclaimer: Registration required; no disclosure obligations.",
+  missouri: "Disclaimer: Registration required; no disclosure obligations.",
+  ny: "Disclaimer: Compensation disclosure required.",
+  newyork: "Disclaimer: Compensation disclosure required.",
+  ut: "Disclaimer: Registration and compensation disclosure required.",
+  utah: "Disclaimer: Registration and compensation disclosure required.",
+  va: "Disclaimer: Must register and disclose compensation in sales-based financing.",
+  virginia: "Disclaimer: Must register and disclose compensation in sales-based financing.",
+};
+
+const disclaimer = stateMap[stateInput];
+if (disclaimer) {
+  res.setHeader("X-State-Disclaimer", disclaimer);
+}
+    
     res.setHeader("Content-Type", "application/pdf");
     res.setHeader(
       "Content-Disposition",
