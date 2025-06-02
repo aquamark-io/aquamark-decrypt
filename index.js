@@ -166,8 +166,6 @@ const stateMap = {
   georgia: "Disclaimer: Disclosure required.",
   mo: "Disclaimer: Registration and disclosure required.",
   missouri: "Disclaimer: Registration and disclosure required.",
-  nd: "Disclaimer: DFI license may soon be required. Terms must be under 36% APR.",
-  north dakota: "Disclaimer: DFI license may soon be required. Terms must be under 36% APR.",
   ny: "Disclaimer: Disclosure required.",
   newyork: "Disclaimer: Disclosure required.",
   ut: "Disclaimer: License, registration and disclosure required.",
