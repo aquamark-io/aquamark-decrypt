@@ -147,6 +147,7 @@ const [embeddedPage] = await pdfDoc.embedPages([watermarkEmbed.getPages()[0]]);
       .update({
         pages_used: newPagesUsed,
         pages_remaining: newPagesRemaining,
+        files: (usage.files || 0) + 1
       })
       .eq("user_email", userEmail)
       .select();
