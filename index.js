@@ -181,10 +181,14 @@ let disclaimer = stateMap[stateInput] || "No current requirements";
 res.setHeader("X-State-Disclaimer", disclaimer);
     
     res.setHeader("Content-Type", "application/pdf");
-    res.setHeader(
-      "Content-Disposition",
-      `attachment; filename="${file.name.replace(".pdf", "")}-protected.pdf"`
-    );
+
+const lenderSuffix = req.body.lender ? `-${req.body.lender.replace(/[^a-z0-9]/gi, "_")}` : "";
+const baseName = file.name.replace(/\.pdf$/i, "");
+res.setHeader(
+  "Content-Disposition",
+  `attachment; filename="${baseName}-protected${lenderSuffix}.pdf"`
+);
+    
     res.send(Buffer.from(finalPdf));
   } catch (err) {
     console.error("❌ Watermark error:", err);
